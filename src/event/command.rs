@@ -163,7 +163,7 @@ impl CommandComplete {
                 }
 
                 ReturnParameters::Vendor(
-                    crate::vendor::event::command::VendorReturnParameters::new(bytes)?,
+                    crate::vendor::event::response::VendorReturnParameters::new(bytes)?,
                 )
             }
         };
@@ -308,7 +308,7 @@ pub enum ReturnParameters {
     LeTestEnd(LeTestEnd),
 
     /// Parameters returned by vendor-specific commands.
-    Vendor(crate::vendor::event::command::VendorReturnParameters),
+    Vendor(crate::vendor::event::response::VendorReturnParameters),
 }
 
 fn to_status(bytes: &[u8]) -> Result<Status, crate::event::Error> {

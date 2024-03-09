@@ -4,7 +4,7 @@
 //! vendor-specific events by the Bluetooth HCI. This module defines those events and functions to
 //! deserialize buffers into them.
 
-pub mod command;
+pub mod response;
 
 use byteorder::{ByteOrder, LittleEndian};
 use core::cmp::PartialEq;
