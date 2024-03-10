@@ -306,16 +306,6 @@ pub struct L2CapCocConnectConfirm {
     /// Values:
     /// - 0x0000 .. 0x000C
     pub result: u16,
-    /// Number of channels to be created. If this parameter is
-    /// set to 0, it requests the creation of one LE credit based connection-
-    /// oriented channel. Otherwise, it requests the creation of one or more
-    /// enhanced credit based connection-oriented channels.
-    ///
-    /// Values:
-    /// - 0 .. 5
-    pub channel_number: u8,
-    /// List of channel indexes for which the primitives apply.
-    pub channel_index_list: [u8; 246],
 }
 
 impl L2CapCocConnectConfirm {
@@ -329,8 +319,6 @@ impl L2CapCocConnectConfirm {
         LittleEndian::write_u16(&mut bytes[4..], self.mps);
         LittleEndian::write_u16(&mut bytes[6..], self.initial_credits);
         LittleEndian::write_u16(&mut bytes[8..], self.result);
-        bytes[10] = self.channel_number;
-        bytes[11..].copy_from_slice(&self.channel_index_list);
     }
 }
 
