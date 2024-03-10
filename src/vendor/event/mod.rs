@@ -3243,7 +3243,6 @@ fn to_l2cap_coc_connect_confirm(buffer: &[u8]) -> Result<CocConnectConfirmEvent,
         results: LittleEndian::read_u16(&buffer[10..]),
         value_buf: [0u8; CocConnectConfirmEvent::MAX_NUM_CHANNELS], value_len: buffer[12] as usize};
 
-    info!("LEN {} ", event.value_len);
     if event.value_len > 0 {
         event.value_buf[..event.value_len].copy_from_slice(&buffer[13..]);
     }
@@ -3335,15 +3334,12 @@ impl CocRxDataEvent {
 }
 
 fn to_l2cap_coc_rx_data(buffer: &[u8]) -> Result<CocRxDataEvent, crate::event::Error> {
-    info!("RX");
     let mut event = CocRxDataEvent{ 
         channel: buffer[2], 
         value_buf: [0u8; CocRxDataEvent::MAX_LENGTH], value_len: usize::from(LittleEndian::read_u16(&buffer[3..]))};
 
-    info!("START COPY {}", buffer);
     if event.value_len > 0 {
         event.value_buf[..event.value_len].copy_from_slice(&buffer[5..]);
     }
-    info!("END COPY");
     Ok(event)
 }
