@@ -150,8 +150,8 @@ impl<T: Controller> L2capCommands for T {
     );
 
     impl_variable_length_params!(
-        coc_tx_data,
-        L2CapCocTxData,
+        coc_tx_data<'a>,
+        L2CapCocTxData<'a>,
         crate::vendor::opcode::L2CAP_COC_TX_DATA
     );
 }
@@ -429,21 +429,22 @@ impl L2CapCocFlowControl {
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 /// Parameter for the [coc_tx_data](L2capCommands::coc_tx_data) command
-pub struct L2CapCocTxData {
+pub struct L2CapCocTxData<'a> {
     pub channel_index: u8,
     pub length: u16,
-    pub data: [u8; 252],
+    /// Value to be written. The maximum length is 248 bytes.
+    pub data: &'a [u8],
 }
 
-impl L2CapCocTxData {
+impl<'a> L2CapCocTxData<'a> {
     const MIN_LENGTH: usize = 4;
     const MAX_LENGTH: usize = 256;
 
     fn copy_into_slice(&self, bytes: &mut [u8]) {
-        assert_eq!(bytes.len(), (3 + self.length).into());
-
+        assert!(bytes.len() >= Self::MAX_LENGTH);
+        
         bytes[0] = self.channel_index;
         LittleEndian::write_u16(&mut bytes[1..], self.length);
-        bytes[3..].copy_from_slice(&self.data[..self.length as usize]);
+        bytes[3..3+self.data.len()].copy_from_slice(&self.data);
     }
 }
