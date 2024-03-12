@@ -117,7 +117,7 @@ impl<T: Controller> L2capCommands for T {
         crate::vendor::opcode::L2CAP_COC_CONNECT
     );
 
-    impl_variable_length_params!(
+    impl_params!(
         coc_connect_confirm,
         L2CapCocConnectConfirm,
         crate::vendor::opcode::L2CAP_COC_CONNECT_CONFIRM
@@ -309,10 +309,10 @@ pub struct L2CapCocConnectConfirm {
 }
 
 impl L2CapCocConnectConfirm {
-    const MAX_LENGTH: usize = 258;
+    const LENGTH: usize = 10;
 
     fn copy_into_slice(&self, bytes: &mut [u8]) {
-        assert!(bytes.len() >= Self::MAX_LENGTH);
+        assert_eq!(bytes.len(), Self::LENGTH);
 
         LittleEndian::write_u16(&mut bytes[0..], self.conn_handle.0);
         LittleEndian::write_u16(&mut bytes[2..], self.mtu);
@@ -349,20 +349,25 @@ pub struct L2CapCocReconfig {
     /// - 0 .. 5
     pub channel_number: u8,
     /// List of channel indexes for which the primitives apply.
-    pub channel_index_list: [u8; 246],
+    pub channel_index_list: [u8; 5],
 }
 
 impl L2CapCocReconfig {
-    const MAX_LENGTH: usize = 254;
+    const MIN_LENGTH: usize = 7;
+    const MAX_LENGTH: usize = 12;
 
     fn copy_into_slice(&self, bytes: &mut [u8]) {
-        assert!(bytes.len() >= Self::MAX_LENGTH);
+        assert!(bytes.len() >= Self::MIN_LENGTH);
+        assert!(bytes.len() <= Self::MAX_LENGTH);
 
         LittleEndian::write_u16(&mut bytes[0..], self.conn_handle.0);
         LittleEndian::write_u16(&mut bytes[2..], self.mtu);
         LittleEndian::write_u16(&mut bytes[4..], self.mps);
         bytes[6] = self.channel_number;
-        bytes[7..].copy_from_slice(&self.channel_index_list);
+
+        if self.channel_number > 0 {
+            bytes[7..].copy_from_slice(&self.channel_index_list[..self.channel_number as usize]);
+        }
     }
 }
 
@@ -431,13 +436,14 @@ pub struct L2CapCocTxData {
 }
 
 impl L2CapCocTxData {
+    const MIN_LENGTH: usize = 4;
     const MAX_LENGTH: usize = 256;
 
     fn copy_into_slice(&self, bytes: &mut [u8]) {
-        assert!(bytes.len() >= Self::MAX_LENGTH);
+        assert_eq!(bytes.len(), (3 + self.length).into());
 
         bytes[0] = self.channel_index;
         LittleEndian::write_u16(&mut bytes[1..], self.length);
-        bytes[3..].copy_from_slice(&self.data);
+        bytes[3..].copy_from_slice(&self.data[..self.length as usize]);
     }
 }

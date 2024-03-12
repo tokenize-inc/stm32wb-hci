@@ -157,6 +157,12 @@ impl CommandComplete {
                 ReturnParameters::LeTransmitterTest(to_status(&bytes[3..])?)
             }
             crate::opcode::LE_TEST_END => ReturnParameters::LeTestEnd(to_le_test_end(&bytes[3..])?),
+            crate::opcode::LE_SET_DATA_LENGTH => {
+                ReturnParameters::LeSetDataLength(to_status(&bytes[3..])?)
+            }
+            crate::opcode::LE_WRITE_SUGGESTED_DEFAULT_DATA_LENGTH => {
+                ReturnParameters::LeWriteSuggestedDefaultDataLength(to_status(&bytes[3..])?)
+            }
             other => {
                 if other.ogf() != VENDOR_OGF {
                     return Err(crate::event::Error::UnknownOpcode(other));
@@ -306,6 +312,10 @@ pub enum ReturnParameters {
 
     /// Parameters returned by the [LE Test End](crate::host::HostHci::le_test_end) command.
     LeTestEnd(LeTestEnd),
+
+    LeSetDataLength(Status),
+
+    LeWriteSuggestedDefaultDataLength(Status),
 
     /// Parameters returned by vendor-specific commands.
     Vendor(crate::vendor::event::response::VendorReturnParameters),
