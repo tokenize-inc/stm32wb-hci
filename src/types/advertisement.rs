@@ -9,6 +9,8 @@ use super::CommonDataType;
 pub enum Advertisement<'a> {
     /// Complete local name of the device.
     CompleteLocalName(&'a str),
+    CompleteListOf16BitServices(&'a [u16]),
+    CompleteListOf128BitServices(&'a [u128]),
     /// Service data with 16-bit UUID.
     ///
     /// The first parameter is the UUID, the second parameter is the payload.
@@ -45,6 +47,8 @@ impl Advertisement<'_> {
         use Advertisement::*;
         2 + match self {
             CompleteLocalName(n) => n.len(),
+            CompleteListOf16BitServices(n) => n.len() * 2,
+            CompleteListOf128BitServices(n) => n.len() * 16,
             ServiceData16BitUuid(_, b) | ManufacturerSpecificData(_, b) => 2 + b.len(),
             ServiceData32BitUuid(_, b) => 4 + b.len(),
             ServiceData128BitUuid(_, b) => 16 + b.len(),
@@ -56,6 +60,8 @@ impl Advertisement<'_> {
         use Advertisement::*;
         match self {
             CompleteLocalName(_) => CommonDataType::CompleteLocalName,
+            CompleteListOf16BitServices(_) => CommonDataType::CompleteListOf16BitServiceClassUuids,
+            CompleteListOf128BitServices(_) => CommonDataType::CompleteListOf128BitServiceClassUuids,
             ServiceData16BitUuid(_, _) => CommonDataType::ServiceData16BitUuid,
             ServiceData32BitUuid(_, _) => CommonDataType::ServiceData32BitUuid,
             ServiceData128BitUuid(_, _) => CommonDataType::ServiceData128BitUuid,
@@ -78,6 +84,12 @@ impl Advertisement<'_> {
         match self {
             CompleteLocalName(n) => {
                 bytes[2..2 + n.len()].copy_from_slice(n.as_bytes());
+            }
+            CompleteListOf16BitServices(n) => {
+                LittleEndian::write_u16_into(n, &mut bytes[2..2+(n.len() * 2)]);
+            }
+            CompleteListOf128BitServices(n) => {
+                LittleEndian::write_u128_into(n, &mut bytes[2..2+(n.len() * 16)]);
             }
             ServiceData16BitUuid(u, b) | ManufacturerSpecificData(u, b) => {
                 LittleEndian::write_u16(&mut bytes[2..], *u);
