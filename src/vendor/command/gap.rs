@@ -1675,6 +1675,7 @@ pub enum IoCapability {
 }
 
 /// Parameters for the [GAP Set Authentication Requirement](GapCommands::set_authentication_requirement) command.
+#[derive(Copy, Clone)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct AuthenticationRequirements {
     /// Is bonding required?
@@ -1767,6 +1768,7 @@ pub enum SecureConnectionSupport {
 }
 
 /// Options for [`fixed_pin`](AuthenticationRequirements).
+#[derive(Copy, Clone)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Pin {
     /// Do not use fixed pin during the pairing process.  In this case, GAP will generate a
