@@ -2511,7 +2511,7 @@ pub struct AdvSetConfig {
 }
 
 impl AdvSetConfig {
-    const LENGTH: usize = 25;
+    const LENGTH: usize = 26;
 
     fn copy_into_slice(&self, bytes: &mut [u8]) {
         assert_eq!(bytes.len(), Self::LENGTH);
