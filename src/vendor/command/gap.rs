@@ -2522,7 +2522,7 @@ impl AdvSetConfig {
         self.adv_interval.copy_into_slice(&mut bytes[4..]);
         bytes[12] = self.primary_adv_channel_map.bits();
         bytes[13] = self.own_addr_type as u8;
-        self.peer_addr.copy_into_slice(&mut bytes[14..]);
+        self.peer_addr.copy_into_slice(&mut bytes[14..21]);
         bytes[21] = self.adv_filter_policy as u8;
         bytes[22] = self.adv_tx_power;
         bytes[23] = self.secondary_adv_max_skip;
