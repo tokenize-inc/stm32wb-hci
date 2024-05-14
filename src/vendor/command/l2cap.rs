@@ -441,8 +441,9 @@ impl<'a> L2CapCocTxData<'a> {
     const MAX_LENGTH: usize = 256;
 
     fn copy_into_slice(&self, bytes: &mut [u8]) {
-        assert!(bytes.len() >= Self::MAX_LENGTH);
-        
+        assert!(bytes.len() >= Self::MIN_LENGTH);
+        assert!(bytes.len() <= Self::MAX_LENGTH);
+
         bytes[0] = self.channel_index;
         LittleEndian::write_u16(&mut bytes[1..], self.length);
         bytes[3..3+self.data.len()].copy_from_slice(&self.data);
