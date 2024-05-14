@@ -3198,7 +3198,7 @@ pub struct CocConnectEvent {
 }
 
 fn to_l2cap_coc_connect(buffer: &[u8]) -> Result<CocConnectEvent, crate::event::Error> {
-    require_len!(buffer, 11);
+    require_len!(buffer, 13);
 
     Ok(CocConnectEvent{ 
         conn_handle: ConnectionHandle(LittleEndian::read_u16(&buffer[2..])), 
