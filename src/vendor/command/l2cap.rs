@@ -355,10 +355,13 @@ pub struct L2CapCocReconfig {
 impl L2CapCocReconfig {
     const MIN_LENGTH: usize = 7;
     const MAX_LENGTH: usize = 12;
+    const MAX_NUM_CHANNELS: u8 = 5;
+
 
     fn copy_into_slice(&self, bytes: &mut [u8]) {
         assert!(bytes.len() >= Self::MIN_LENGTH);
         assert!(bytes.len() <= Self::MAX_LENGTH);
+        assert!(self.channel_number <= Self::MAX_NUM_CHANNELS);
 
         LittleEndian::write_u16(&mut bytes[0..], self.conn_handle.0);
         LittleEndian::write_u16(&mut bytes[2..], self.mtu);
