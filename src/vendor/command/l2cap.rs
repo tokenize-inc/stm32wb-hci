@@ -117,7 +117,7 @@ impl<T: Controller> L2capCommands for T {
         crate::vendor::opcode::L2CAP_COC_CONNECT
     );
 
-    impl_variable_length_params!(
+    impl_params!(
         coc_connect_confirm,
         L2CapCocConnectConfirm,
         crate::vendor::opcode::L2CAP_COC_CONNECT_CONFIRM
@@ -150,8 +150,8 @@ impl<T: Controller> L2capCommands for T {
     );
 
     impl_variable_length_params!(
-        coc_tx_data,
-        L2CapCocTxData,
+        coc_tx_data<'a>,
+        L2CapCocTxData<'a>,
         crate::vendor::opcode::L2CAP_COC_TX_DATA
     );
 }
@@ -306,31 +306,19 @@ pub struct L2CapCocConnectConfirm {
     /// Values:
     /// - 0x0000 .. 0x000C
     pub result: u16,
-    /// Number of channels to be created. If this parameter is
-    /// set to 0, it requests the creation of one LE credit based connection-
-    /// oriented channel. Otherwise, it requests the creation of one or more
-    /// enhanced credit based connection-oriented channels.
-    ///
-    /// Values:
-    /// - 0 .. 5
-    pub channel_number: u8,
-    /// List of channel indexes for which the primitives apply.
-    pub channel_index_list: [u8; 246],
 }
 
 impl L2CapCocConnectConfirm {
-    const MAX_LENGTH: usize = 258;
+    const LENGTH: usize = 10;
 
     fn copy_into_slice(&self, bytes: &mut [u8]) {
-        assert!(bytes.len() >= Self::MAX_LENGTH);
+        assert_eq!(bytes.len(), Self::LENGTH);
 
         LittleEndian::write_u16(&mut bytes[0..], self.conn_handle.0);
         LittleEndian::write_u16(&mut bytes[2..], self.mtu);
         LittleEndian::write_u16(&mut bytes[4..], self.mps);
         LittleEndian::write_u16(&mut bytes[6..], self.initial_credits);
         LittleEndian::write_u16(&mut bytes[8..], self.result);
-        bytes[10] = self.channel_number;
-        bytes[11..].copy_from_slice(&self.channel_index_list);
     }
 }
 
@@ -361,20 +349,28 @@ pub struct L2CapCocReconfig {
     /// - 0 .. 5
     pub channel_number: u8,
     /// List of channel indexes for which the primitives apply.
-    pub channel_index_list: [u8; 246],
+    pub channel_index_list: [u8; 5],
 }
 
 impl L2CapCocReconfig {
-    const MAX_LENGTH: usize = 254;
+    const MIN_LENGTH: usize = 7;
+    const MAX_LENGTH: usize = 12;
+    const MAX_NUM_CHANNELS: u8 = 5;
+
 
     fn copy_into_slice(&self, bytes: &mut [u8]) {
-        assert!(bytes.len() >= Self::MAX_LENGTH);
+        assert!(bytes.len() >= Self::MIN_LENGTH);
+        assert!(bytes.len() <= Self::MAX_LENGTH);
+        assert!(self.channel_number <= Self::MAX_NUM_CHANNELS);
 
         LittleEndian::write_u16(&mut bytes[0..], self.conn_handle.0);
         LittleEndian::write_u16(&mut bytes[2..], self.mtu);
         LittleEndian::write_u16(&mut bytes[4..], self.mps);
         bytes[6] = self.channel_number;
-        bytes[7..].copy_from_slice(&self.channel_index_list);
+
+        if self.channel_number > 0 {
+            bytes[7..].copy_from_slice(&self.channel_index_list[..self.channel_number as usize]);
+        }
     }
 }
 
@@ -436,20 +432,23 @@ impl L2CapCocFlowControl {
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 /// Parameter for the [coc_tx_data](L2capCommands::coc_tx_data) command
-pub struct L2CapCocTxData {
+pub struct L2CapCocTxData<'a> {
     pub channel_index: u8,
     pub length: u16,
-    pub data: [u8; 252],
+    /// Value to be written. The maximum length is 248 bytes.
+    pub data: &'a [u8],
 }
 
-impl L2CapCocTxData {
+impl<'a> L2CapCocTxData<'a> {
+    const MIN_LENGTH: usize = 4;
     const MAX_LENGTH: usize = 256;
 
     fn copy_into_slice(&self, bytes: &mut [u8]) {
-        assert!(bytes.len() >= Self::MAX_LENGTH);
+        assert!(bytes.len() >= Self::MIN_LENGTH);
+        assert!(bytes.len() <= Self::MAX_LENGTH);
 
         bytes[0] = self.channel_index;
         LittleEndian::write_u16(&mut bytes[1..], self.length);
-        bytes[3..].copy_from_slice(&self.data);
+        bytes[3..3+self.data.len()].copy_from_slice(&self.data);
     }
 }

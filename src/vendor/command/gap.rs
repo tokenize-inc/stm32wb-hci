@@ -1675,6 +1675,7 @@ pub enum IoCapability {
 }
 
 /// Parameters for the [GAP Set Authentication Requirement](GapCommands::set_authentication_requirement) command.
+#[derive(Copy, Clone)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct AuthenticationRequirements {
     /// Is bonding required?
@@ -1767,6 +1768,7 @@ pub enum SecureConnectionSupport {
 }
 
 /// Options for [`fixed_pin`](AuthenticationRequirements).
+#[derive(Copy, Clone)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Pin {
     /// Do not use fixed pin during the pairing process.  In this case, GAP will generate a
@@ -2509,7 +2511,7 @@ pub struct AdvSetConfig {
 }
 
 impl AdvSetConfig {
-    const LENGTH: usize = 25;
+    const LENGTH: usize = 26;
 
     fn copy_into_slice(&self, bytes: &mut [u8]) {
         assert_eq!(bytes.len(), Self::LENGTH);
@@ -2520,7 +2522,7 @@ impl AdvSetConfig {
         self.adv_interval.copy_into_slice(&mut bytes[4..]);
         bytes[12] = self.primary_adv_channel_map.bits();
         bytes[13] = self.own_addr_type as u8;
-        self.peer_addr.copy_into_slice(&mut bytes[14..]);
+        self.peer_addr.copy_into_slice(&mut bytes[14..21]);
         bytes[21] = self.adv_filter_policy as u8;
         bytes[22] = self.adv_tx_power;
         bytes[23] = self.secondary_adv_max_skip;

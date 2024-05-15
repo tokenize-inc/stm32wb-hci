@@ -99,5 +99,7 @@ opcodes! {
         pub const LE_RECEIVER_TEST = 0x001D;
         pub const LE_TRANSMITTER_TEST = 0x001E;
         pub const LE_TEST_END = 0x001F;
+        pub const LE_SET_DATA_LENGTH = 0x0022;
+        pub const LE_WRITE_SUGGESTED_DEFAULT_DATA_LENGTH = 0x0024;
     }
 }

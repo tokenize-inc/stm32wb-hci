@@ -257,6 +257,14 @@ pub enum VendorReturnParameters {
     /// Status returned by the
     /// [L2CAP Connection Parameter Update Response](crate::vendor::command::l2cap::L2capCommands::connection_parameter_update_response) command.
     L2CapConnectionParameterUpdateResponse(crate::Status),
+
+    L2CapCocConnect(crate::Status),
+    L2CapCocConnectConfirm(CocConnectConfirm),
+    L2CapCocReconfig(crate::Status),
+    L2CapCocReconfigConfirm(crate::Status),
+    L2CapCocDisconnect(crate::Status),
+    L2CapCocFlowControl(crate::Status),
+    L2CapCocTxData(crate::Status),
 }
 
 impl VendorReturnParameters {
@@ -460,6 +468,23 @@ impl VendorReturnParameters {
                     &bytes[3..],
                 )?),
             ),
+            crate::vendor::opcode::L2CAP_COC_CONNECT => Ok(
+                VendorReturnParameters::L2CapCocConnect(to_status(
+                    &bytes[3..],
+                )?),
+            ),
+            crate::vendor::opcode::L2CAP_COC_CONNECT_CONFIRM => Ok(VendorReturnParameters::L2CapCocConnectConfirm(to_coc_connect_confirm(&bytes[3..])?))
+            ,
+            crate::vendor::opcode::L2CAP_COC_RECONFIG => Ok(VendorReturnParameters::L2CapCocReconfig(to_status(&bytes[3..])?))
+            ,
+            crate::vendor::opcode::L2CAP_COC_RECONFIG_CONFIRM => Ok(VendorReturnParameters::L2CapCocReconfigConfirm(to_status(&bytes[3..])?))
+            ,
+            crate::vendor::opcode::L2CAP_COC_FLOW_CONTROL => Ok(VendorReturnParameters::L2CapCocFlowControl(to_status(&bytes[3..])?))
+            ,
+            crate::vendor::opcode::L2CAP_COC_TX_DATA => Ok(VendorReturnParameters::L2CapCocTxData(to_status(&bytes[3..])?))
+            ,
+            crate::vendor::opcode::L2CAP_COC_DISCONNECT => Ok(VendorReturnParameters::L2CapCocDisconnect(to_status(&bytes[3..])?))
+            ,
             other => Err(crate::event::Error::UnknownOpcode(other)),
         }
     }
@@ -1061,4 +1086,42 @@ fn to_gatt_handle_value(bytes: &[u8]) -> Result<GattHandleValue, crate::event::E
     handle_value.value_buf[..value_len].copy_from_slice(&bytes[3..]);
 
     Ok(handle_value)
+}
+
+/// Parameters returned by the [L2Cap CoC Connect Confirm](crate::vendor::command::l2cap::L2capCommands::coc_connect_confirm) command.
+#[derive(Copy, Clone, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct CocConnectConfirm {
+    /// Did the command fail, and if so, how?
+    ///
+    /// Should be one of:
+    /// - [Success](crate::Status::Success)
+    /// - [InvalidParameters](crate::Status::InvalidParameters)
+    pub status: crate::Status,
+
+    /// Handle for the channel indices
+    value_buf: [u8; CocConnectConfirm::MAX_NUM_CHANNELS],
+    value_len: usize,
+}
+
+impl CocConnectConfirm {
+    const MAX_NUM_CHANNELS: usize = 5;
+
+    /// Return the handle value. Only valid bytes are returned.
+    pub fn channels(&self) -> &[u8] {
+        &self.value_buf[..self.value_len]
+    }
+}
+
+fn to_coc_connect_confirm(bytes: &[u8]) -> Result<CocConnectConfirm, crate::event::Error> {
+    require_len_at_least!(bytes, 2);
+
+    let status = to_status(bytes)?;
+    let value_len = bytes[1] as usize;
+    require_len!(bytes, 2 + value_len);
+
+    let mut confirm = CocConnectConfirm{ status, value_buf: [0u8;CocConnectConfirm::MAX_NUM_CHANNELS], value_len };
+    confirm.value_buf[..value_len].copy_from_slice(&bytes[2..]);
+
+    Ok(confirm)
 }

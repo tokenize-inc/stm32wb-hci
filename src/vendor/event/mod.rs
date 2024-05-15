@@ -4,7 +4,7 @@
 //! vendor-specific events by the Bluetooth HCI. This module defines those events and functions to
 //! deserialize buffers into them.
 
-pub mod command;
+pub mod response;
 
 use byteorder::{ByteOrder, LittleEndian};
 use core::cmp::PartialEq;
@@ -15,7 +15,6 @@ use core::time::Duration;
 
 use crate::host::PeerAddrType;
 pub use crate::types::{ConnectionInterval, ConnectionIntervalError};
-use crate::vendor::command::l2cap::L2CapCocReconfig;
 pub use crate::{BdAddr, BdAddrType, ConnectionHandle};
 
 /// Vendor-specific events for the STM32WB5x radio coprocessor.
@@ -122,22 +121,22 @@ pub enum VendorEvent {
     /// This event is generated when receiving a valid Credit Based Connection Request packet.
     ///
     /// See Bluetooth spec. v.5.4 [Vol 3, Part A].
-    L2CapCocConnect(L2CapCocConnect),
+    L2CapCocConnect(CocConnectEvent),
 
     /// This event is generated when receiving a valid Credit Based Connection Response packet.
     ///
     /// See Bluetooth spec. v.5.4 [Vol 3, Part A].
-    L2CapCocConnectConfirm(L2CapCocConnectConfirm),
+    L2CapCocConnectConfirm(CocConnectConfirmEvent),
 
     /// This event is generated when receiving a valid Credit Based Reconfigure Request packet.
     ///
     /// See Bluetooth spec. v.5.4 [Vol 3, Part A].
-    L2CapCocReconfig(L2CapCocReconfig),
+    L2CapCocReconfig(CocReconfigEvent),
 
     /// This event is generated when receiving a valid Credit Based Reconfigure Response packet.
     ///
     /// See Bluetooth spec. v.5.4 [Vol 3, Part A].
-    L2CapCocReconfigConfirm(L2CapCocReconfigConfirm),
+    L2CapCocReconfigConfirm(CocReconfigConfirmEvent),
 
     /// This event is generated when a connection-oriented channel is disconnected following an
     /// L2CAP channel termination procedure.
@@ -150,7 +149,7 @@ pub enum VendorEvent {
     /// This event is generated when receiving a valid Flow Control Credit signaling packet.
     ///
     /// See Bluetooth spec. v.5.4 [Vol 3, Part A].
-    L2CapCocFlowControl(L2CapCocFlowControl),
+    L2CapCocFlowControl(CocFlowControlEvent),
 
     /// This event is generated when receiving a valid K-frame packet on a connection-oriented channel
     ///
@@ -160,7 +159,7 @@ pub enum VendorEvent {
     /// For the first K-frame of the SDU, the information data contains the L2CAP SDU length coded in
     /// two octets followed by the K-frame information payload. For the next K-frames of the SDU, the
     /// information data only contains the K-frame information payload.
-    L2CapCocRxData(L2CapCocRxData),
+    L2CapCocRxData(CocRxDataEvent),
 
     /// Each time the [L2CAO COC Tx Data](crate::vendor::command::l2cap::L2capCommands::coc_tx_data) command
     /// raises the error code [Insufficient Resources](VendorStatus::InsufficientResources) (0x64), this event
@@ -752,10 +751,7 @@ impl VendorEvent {
             0x0813 => Ok(VendorEvent::L2CapCocReconfigConfirm(
                 to_l2cap_coc_reconfig_confirm(buffer)?,
             )),
-            0x0814 => Ok(VendorEvent::L2CapCocDisconnect({
-                require_len!(buffer, 1);
-                buffer[0]
-            })),
+            0x0814 => Ok(VendorEvent::L2CapCocDisconnect(buffer[0])),
             0x0815 => Ok(VendorEvent::L2CapCocFlowControl(to_l2cap_coc_flow_control(
                 buffer,
             )?)),
@@ -1183,9 +1179,6 @@ impl GapDeviceFound {
 pub use crate::event::AdvertisementEvent as GapDeviceFoundEvent;
 
 use super::command::gap::EventFlags;
-use super::command::l2cap::{
-    L2CapCocConnect, L2CapCocConnectConfirm, L2CapCocFlowControl, L2CapCocReconfigConfirm,
-};
 
 fn to_gap_device_found(buffer: &[u8]) -> Result<GapDeviceFound, crate::event::Error> {
     const RSSI_UNAVAILABLE: i8 = 127;
@@ -2868,107 +2861,6 @@ fn to_l2cap_command_reject(buffer: &[u8]) -> Result<L2CapCommandReject, crate::e
     })
 }
 
-fn to_l2cap_coc_connect(buffer: &[u8]) -> Result<L2CapCocConnect, crate::event::Error> {
-    require_len!(buffer, 10);
-
-    Ok(L2CapCocConnect {
-        conn_handle: ConnectionHandle(LittleEndian::read_u16(&buffer[0..])),
-        spsm: LittleEndian::read_u16(&buffer[2..]),
-        mtu: LittleEndian::read_u16(&buffer[4..]),
-        mps: LittleEndian::read_u16(&buffer[6..]),
-        initial_credits: LittleEndian::read_u16(&buffer[8..]),
-        channel_number: buffer[10],
-    })
-}
-
-fn to_l2cap_coc_connect_confirm(
-    buffer: &[u8],
-) -> Result<L2CapCocConnectConfirm, crate::event::Error> {
-    require_len!(buffer, 12);
-
-    let mut channel_index_list = [0; 246];
-    let tmp = &buffer[7..];
-    channel_index_list[..tmp.len()].copy_from_slice(tmp);
-
-    Ok(L2CapCocConnectConfirm {
-        conn_handle: ConnectionHandle(LittleEndian::read_u16(&buffer[0..])),
-        mtu: LittleEndian::read_u16(&buffer[4..]),
-        mps: LittleEndian::read_u16(&buffer[6..]),
-        initial_credits: LittleEndian::read_u16(&buffer[8..]),
-        result: LittleEndian::read_u16(&buffer[10..]),
-        channel_number: buffer[12],
-        channel_index_list,
-    })
-}
-
-fn to_l2cap_coc_reconfig(buffer: &[u8]) -> Result<L2CapCocReconfig, crate::event::Error> {
-    require_len_at_least!(buffer, 8);
-
-    let mut channel_index_list = [0; 246];
-    let tmp = &buffer[7..];
-    channel_index_list[..tmp.len()].copy_from_slice(tmp);
-
-    Ok(L2CapCocReconfig {
-        conn_handle: ConnectionHandle(LittleEndian::read_u16(&buffer[0..])),
-        mtu: LittleEndian::read_u16(&buffer[2..]),
-        mps: LittleEndian::read_u16(&buffer[4..]),
-        channel_number: buffer[6],
-        channel_index_list,
-    })
-}
-
-fn to_l2cap_coc_reconfig_confirm(
-    buffer: &[u8],
-) -> Result<L2CapCocReconfigConfirm, crate::event::Error> {
-    require_len_at_least!(buffer, 4);
-
-    Ok(L2CapCocReconfigConfirm {
-        conn_handle: ConnectionHandle(LittleEndian::read_u16(&buffer[0..])),
-        result: LittleEndian::read_u16(&buffer[2..]),
-    })
-}
-
-fn to_l2cap_coc_flow_control(buffer: &[u8]) -> Result<L2CapCocFlowControl, crate::event::Error> {
-    require_len!(buffer, 3);
-
-    Ok(L2CapCocFlowControl {
-        channel_index: buffer[0],
-        credits: LittleEndian::read_u16(&buffer[1..]),
-    })
-}
-
-#[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-/// This event is generated when receiving a valid K-frame packet on a connection-oriented channel
-///
-/// See Bluetooth spec. v.5.4 [Vol 3, Part A].
-///
-/// # Note:
-/// For the first K-frame of the SDU, the information data contains the L2CAP SDU length coded in
-/// two octets followed by the K-frame information payload. For the next K-frames of the SDU, the
-/// information data only contains the K-frame information payload.
-pub struct L2CapCocRxData {
-    /// Index of the connection-oriented channel for which the primitive applie.
-    pub channel_index: u8,
-    /// Length of the data (in octets)
-    pub length: u16,
-    /// Information data
-    pub data: [u8; 250],
-}
-
-fn to_l2cap_coc_rx_data(buffer: &[u8]) -> Result<L2CapCocRxData, crate::event::Error> {
-    require_len_at_least!(buffer, 3);
-
-    let length = LittleEndian::read_u16(&buffer[1..]);
-    let mut data = [0; 250];
-    data[..length as usize].copy_from_slice(&buffer[3..]);
-
-    Ok(L2CapCocRxData {
-        channel_index: buffer[0],
-        length,
-        data,
-    })
-}
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 /// This event informs the application of a change in status of the Enhanced ATT
@@ -3290,4 +3182,164 @@ fn to_hal_firmware_error(buffer: &[u8]) -> Result<HalFirmwareError, crate::event
         data_len: buffer[1],
         data,
     })
+}
+
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct CocConnectEvent {
+        /// The connection handle related to the event.
+        pub conn_handle: ConnectionHandle,
+
+        pub smps: u16,
+        pub mtu: u16,
+        pub mps: u16,
+        pub initial_credits: u16,
+        pub num_channels: u8,
+}
+
+fn to_l2cap_coc_connect(buffer: &[u8]) -> Result<CocConnectEvent, crate::event::Error> {
+    require_len!(buffer, 13);
+
+    Ok(CocConnectEvent{ 
+        conn_handle: ConnectionHandle(LittleEndian::read_u16(&buffer[2..])), 
+        smps: LittleEndian::read_u16(&buffer[4..]),
+        mtu: LittleEndian::read_u16(&buffer[6..]),
+        mps: LittleEndian::read_u16(&buffer[8..]),
+        initial_credits: LittleEndian::read_u16(&buffer[10..]),
+        num_channels: buffer[12] })
+}
+
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct CocConnectConfirmEvent {
+    /// The connection handle related to the event.
+    pub conn_handle: ConnectionHandle,
+
+    pub smps: u16,
+    pub mtu: u16,
+    pub mps: u16,
+    pub results: u16,
+        
+    /// Handle for the channel indices
+    value_buf: [u8; CocConnectConfirmEvent::MAX_NUM_CHANNELS],
+    value_len: usize,
+}
+
+impl CocConnectConfirmEvent {
+    const MAX_NUM_CHANNELS: usize = 5;
+
+    /// Return the handle value. Only valid bytes are returned.
+    pub fn channels(&self) -> &[u8] {
+        &self.value_buf[..self.value_len]
+    }
+}
+
+fn to_l2cap_coc_connect_confirm(buffer: &[u8]) -> Result<CocConnectConfirmEvent, crate::event::Error> {
+    let mut event = CocConnectConfirmEvent{ 
+        conn_handle: ConnectionHandle(LittleEndian::read_u16(&buffer[2..])), 
+        smps: LittleEndian::read_u16(&buffer[4..]),
+        mtu: LittleEndian::read_u16(&buffer[6..]),
+        mps: LittleEndian::read_u16(&buffer[8..]),
+        results: LittleEndian::read_u16(&buffer[10..]),
+        value_buf: [0u8; CocConnectConfirmEvent::MAX_NUM_CHANNELS], value_len: buffer[12] as usize};
+
+    if event.value_len > 0 {
+        event.value_buf[..event.value_len].copy_from_slice(&buffer[13..]);
+    }
+    Ok(event)
+}
+
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct CocReconfigEvent {
+    /// The connection handle related to the event.
+    pub conn_handle: ConnectionHandle,
+
+    pub mtu: u16,
+    pub mps: u16,
+        
+    /// Handle for the channel indices
+    value_buf: [u8; CocReconfigEvent::MAX_NUM_CHANNELS],
+    value_len: usize,
+}
+
+impl CocReconfigEvent {
+    const MAX_NUM_CHANNELS: usize = 5;
+
+    /// Return the handle value. Only valid bytes are returned.
+    pub fn channels(&self) -> &[u8] {
+        &self.value_buf[..self.value_len]
+    }
+}
+
+fn to_l2cap_coc_reconfig(buffer: &[u8]) -> Result<CocReconfigEvent, crate::event::Error> {
+    let mut event = CocReconfigEvent{ 
+        conn_handle: ConnectionHandle(LittleEndian::read_u16(&buffer[2..])), 
+        mtu: LittleEndian::read_u16(&buffer[4..]),
+        mps: LittleEndian::read_u16(&buffer[6..]),
+        value_buf: [0u8; CocConnectConfirmEvent::MAX_NUM_CHANNELS], value_len: buffer[8] as usize};
+
+        if event.value_len > 0 {
+            event.value_buf[..event.value_len].copy_from_slice(&buffer[9..]);
+        }
+        Ok(event)
+}
+
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct CocReconfigConfirmEvent {
+        /// The connection handle related to the event.
+        pub conn_handle: ConnectionHandle,
+
+        pub result: u16,
+}
+
+fn to_l2cap_coc_reconfig_confirm(buffer: &[u8]) -> Result<CocReconfigConfirmEvent, crate::event::Error> {
+    Ok(CocReconfigConfirmEvent{ 
+        conn_handle: ConnectionHandle(LittleEndian::read_u16(&buffer[2..])), 
+        result: LittleEndian::read_u16(&buffer[4..]) })
+}
+
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct CocFlowControlEvent {
+        pub channel_index: u8,
+        pub credits: u16,
+}
+
+fn to_l2cap_coc_flow_control(buffer: &[u8]) -> Result<CocFlowControlEvent, crate::event::Error> {
+    Ok(CocFlowControlEvent{ 
+        channel_index: buffer[2], 
+        credits: LittleEndian::read_u16(&buffer[3..]) })
+}
+
+
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct CocRxDataEvent {
+    pub channel: u8,
+        
+    /// Handle for the channel indices
+    value_buf: [u8; CocRxDataEvent::MAX_LENGTH],
+    value_len: usize,
+}
+
+impl CocRxDataEvent {
+    const MAX_LENGTH: usize = 248;
+
+    /// Return the handle value. Only valid bytes are returned.
+    pub fn data(&self) -> &[u8] {
+        &self.value_buf[..self.value_len]
+    }
+}
+
+fn to_l2cap_coc_rx_data(buffer: &[u8]) -> Result<CocRxDataEvent, crate::event::Error> {
+    let mut event = CocRxDataEvent{ 
+        channel: buffer[2], 
+        value_buf: [0u8; CocRxDataEvent::MAX_LENGTH], value_len: usize::from(LittleEndian::read_u16(&buffer[3..]))};
+
+    if event.value_len > 0 {
+        event.value_buf[..event.value_len].copy_from_slice(&buffer[5..]);
+    }
+    Ok(event)
 }

@@ -671,6 +671,7 @@ pub enum ConfigParameter {
 /// Transmitter power levels available for the system.
 ///
 /// STM32WB5x uses single byte parameter for PA level.
+#[derive(Clone, Copy)]
 #[repr(u8)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum PowerLevel {

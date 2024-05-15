@@ -1105,6 +1105,9 @@ pub trait HostHci {
     ///
     /// A [Command Complete](crate::event::command::ReturnParameters::LeTestEnd) event is generated.
     async fn le_test_end(&mut self);
+
+    async fn le_set_data_length(&mut self, conn_handle: ConnectionHandle, max_tx_octets: u16, max_tx_time: u16);
+    async fn le_write_suggested_default_data_length(&mut self, max_tx_octets: u16, max_tx_time: u16);
 }
 
 /// Errors that may occur when sending commands to the controller.  Must be specialized on the types
@@ -1524,6 +1527,23 @@ where
     async fn le_test_end(&mut self) {
         self.controller_write(crate::opcode::LE_TEST_END, &[]).await;
     }
+    async fn le_set_data_length(&mut self, conn_handle: ConnectionHandle, max_tx_octets: u16, max_tx_time: u16) {
+        let mut bytes = [0; 6];
+        LittleEndian::write_u16(&mut bytes[0..], conn_handle.0);
+        LittleEndian::write_u16(&mut bytes[2..], max_tx_octets);
+        LittleEndian::write_u16(&mut bytes[4..], max_tx_time);
+        self.controller_write(crate::opcode::LE_SET_DATA_LENGTH, &bytes)
+            .await;
+    }
+
+    async fn le_write_suggested_default_data_length(&mut self, max_tx_octets: u16, max_tx_time: u16) {
+        let mut bytes = [0; 4];
+        LittleEndian::write_u16(&mut bytes[0..], max_tx_octets);
+        LittleEndian::write_u16(&mut bytes[2..], max_tx_time);
+        self.controller_write(crate::opcode::LE_WRITE_SUGGESTED_DEFAULT_DATA_LENGTH, &bytes)
+            .await;
+    }
+
 }
 
 const MAX_TEST_CHANNEL: u8 = 0x27;
