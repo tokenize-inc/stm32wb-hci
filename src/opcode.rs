@@ -101,5 +101,6 @@ opcodes! {
         pub const LE_TEST_END = 0x001F;
         pub const LE_SET_DATA_LENGTH = 0x0022;
         pub const LE_WRITE_SUGGESTED_DEFAULT_DATA_LENGTH = 0x0024;
+        pub const LE_SET_DEFAULT_PHY = 0x0031;
     }
 }

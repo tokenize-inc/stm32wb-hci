@@ -1108,6 +1108,7 @@ pub trait HostHci {
 
     async fn le_set_data_length(&mut self, conn_handle: ConnectionHandle, max_tx_octets: u16, max_tx_time: u16);
     async fn le_write_suggested_default_data_length(&mut self, max_tx_octets: u16, max_tx_time: u16);
+    async fn le_set_default_phy(&mut self, all_phys: u8, tx_phys: u8, rx_phys: u8);
 }
 
 /// Errors that may occur when sending commands to the controller.  Must be specialized on the types
@@ -1541,6 +1542,15 @@ where
         LittleEndian::write_u16(&mut bytes[0..], max_tx_octets);
         LittleEndian::write_u16(&mut bytes[2..], max_tx_time);
         self.controller_write(crate::opcode::LE_WRITE_SUGGESTED_DEFAULT_DATA_LENGTH, &bytes)
+            .await;
+    }
+
+    async fn le_set_default_phy(&mut self, all_phys: u8, tx_phys: u8, rx_phys: u8) {
+        let mut bytes = [0; 3];
+        bytes[0] = all_phys;
+        bytes[1] = tx_phys;
+        bytes[2] = rx_phys;
+        self.controller_write(crate::opcode::LE_SET_DEFAULT_PHY, &bytes)
             .await;
     }
 
