@@ -163,6 +163,9 @@ impl CommandComplete {
             crate::opcode::LE_WRITE_SUGGESTED_DEFAULT_DATA_LENGTH => {
                 ReturnParameters::LeWriteSuggestedDefaultDataLength(to_status(&bytes[3..])?)
             }
+            crate::opcode::LE_SET_DEFAULT_PHY => {
+                ReturnParameters::LeSetDefaultPhy(to_status(&bytes[3..])?)
+            }
             other => {
                 if other.ogf() != VENDOR_OGF {
                     return Err(crate::event::Error::UnknownOpcode(other));
@@ -316,6 +319,8 @@ pub enum ReturnParameters {
     LeSetDataLength(Status),
 
     LeWriteSuggestedDefaultDataLength(Status),
+
+    LeSetDefaultPhy(Status),
 
     /// Parameters returned by vendor-specific commands.
     Vendor(crate::vendor::event::response::VendorReturnParameters),
