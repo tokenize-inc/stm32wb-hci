@@ -821,8 +821,8 @@ impl VendorEvent {
                 to_gatt_multi_notification(buffer)?,
             )),
             0x0C1B => Ok(VendorEvent::GattNotificationComplete({
-                require_len!(buffer, 2);
-                AttributeHandle(LittleEndian::read_u16(buffer))
+                require_len!(buffer, 4);
+                AttributeHandle(LittleEndian::read_u16(&buffer[2..]))
             })),
             0x0C1D => Ok(VendorEvent::GattReadExt(to_gatt_read_ext(buffer)?)),
             0x0C1E => Ok(VendorEvent::GattIndicationExt(to_attribute_value_ext(
