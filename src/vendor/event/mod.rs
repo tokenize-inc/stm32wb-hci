@@ -1061,7 +1061,7 @@ pub struct GapPairingComplete {
     pub status: GapPairingStatus,
 
     /// Pairing failed reason code (valid in case of pairing failed status)
-    pub reason: GapPairingReason,
+    pub reason: Option<GapPairingReason>,
 }
 
 /// Reasons the [GAP Pairing Complete](VendorEvent::GapPairingComplete) event was generated.
@@ -1134,10 +1134,17 @@ impl TryFrom<u8> for GapPairingReason {
 
 fn to_gap_pairing_complete(buffer: &[u8]) -> Result<GapPairingComplete, crate::event::Error> {
     require_len!(buffer, 6);
+
+    let status: GapPairingStatus = buffer[4].try_into().map_err(crate::event::Error::Vendor)?;
+    let reason = match status {
+        GapPairingStatus::Success => None,
+        _ => Some(buffer[5].try_into().map_err(crate::event::Error::Vendor)?),
+    };
+
     Ok(GapPairingComplete {
         conn_handle: ConnectionHandle(LittleEndian::read_u16(&buffer[2..])),
-        status: buffer[4].try_into().map_err(crate::event::Error::Vendor)?,
-        reason: buffer[5].try_into().map_err(crate::event::Error::Vendor)?,
+        status,
+        reason,
     })
 }
 
