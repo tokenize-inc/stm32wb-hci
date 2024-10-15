@@ -2177,15 +2177,14 @@ impl AttributeValue {
 fn to_attribute_value(buffer: &[u8]) -> Result<AttributeValue, crate::event::Error> {
     require_len_at_least!(buffer, 7);
 
-    let data_len = buffer[4] as usize;
-    require_len!(buffer, 5 + data_len);
+    let value_len = buffer[6] as usize;
+    require_len!(buffer, 7 + value_len);
 
-    let value_len = data_len - 2;
     let mut value_buf = [0; MAX_ATTRIBUTE_VALUE_LEN];
     value_buf[..value_len].copy_from_slice(&buffer[7..]);
     Ok(AttributeValue {
         conn_handle: ConnectionHandle(LittleEndian::read_u16(&buffer[2..])),
-        attribute_handle: AttributeHandle(LittleEndian::read_u16(&buffer[5..])),
+        attribute_handle: AttributeHandle(LittleEndian::read_u16(&buffer[4..])),
         value_len,
         value_buf,
     })
