@@ -849,11 +849,12 @@ impl TryFrom<u8> for ConnectionRole {
 
 /// Values for the central (master) clock accuracy as returned by the
 /// [LE Connection Complete](Event::LeConnectionComplete) event.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum CentralClockAccuracy {
     /// The central clock is accurate to at least 500 parts-per-million.  This value is also used
     /// when the device is a central device.
+    #[default]
     Ppm500,
     /// The central clock is accurate to at least 250 parts-per-million.
     Ppm250,
@@ -890,17 +891,35 @@ impl TryFrom<u8> for CentralClockAccuracy {
 
 fn to_le_connection_complete(payload: &[u8]) -> Result<LeConnectionComplete, Error> {
     require_len!(payload, 19);
+    // For direct connect advertisements a connection complete event is generated when a connection timeout or success occurs.
+    // This event does not contain the conn_interval or the central_clock_accuracy, so we need to use defaults in that case.
     let mut bd_addr = crate::BdAddr([0; 6]);
     bd_addr.0.copy_from_slice(&payload[6..12]);
+
+    let conn_interval = if payload[12..18].iter().all(|&x| x == 0) {
+        // Direct connect
+        FixedConnectionInterval::default()
+    } else {
+        FixedConnectionInterval::from_bytes(&payload[12..18])
+        .map_err(Error::BadConnectionInterval)?
+    };
+
+
+    let central_clock_accuracy = if payload[18] == 0 {
+        // Direct connect
+        CentralClockAccuracy::default()
+    } else {
+        payload[18].try_into()?
+    };
+
     Ok(LeConnectionComplete {
         status: payload[1].try_into().map_err(rewrap_bad_status)?,
         conn_handle: ConnectionHandle(LittleEndian::read_u16(&payload[2..])),
         role: payload[4].try_into()?,
         peer_bd_addr: crate::to_bd_addr_type(payload[5], bd_addr)
             .map_err(rewrap_bd_addr_type_err)?,
-        conn_interval: FixedConnectionInterval::from_bytes(&payload[12..18])
-            .map_err(Error::BadConnectionInterval)?,
-        central_clock_accuracy: payload[18].try_into()?,
+        conn_interval, 
+        central_clock_accuracy,
     })
 }
 

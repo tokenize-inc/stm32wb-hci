@@ -962,7 +962,7 @@ fn to_l2cap_connection_update_accepted_result(
         _ => Err(VendorError::BadL2CapConnectionResponseResult(value)),
     }
 }
-
+#[allow(unused)]
 fn extract_l2cap_connection_update_response_result(
     buffer: &[u8],
 ) -> Result<L2CapConnectionUpdateResult, VendorError> {

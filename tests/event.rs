@@ -276,10 +276,32 @@ fn le_connection_complete() {
 }
 
 #[test]
+fn le_connection_complete_direct() {
+    let buffer = [
+        0x3E, 19, 0x01, 0x00, 0x01, 0x02, 0x00, 0x00, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x0,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ];
+    match TestEvent::new(Packet(&buffer)) {
+        Ok(Event::LeConnectionComplete(event)) => {
+            assert_eq!(event.status, hci::Status::Success);
+            assert_eq!(event.conn_handle, hci::ConnectionHandle(0x0201));
+            assert_eq!(event.role, ConnectionRole::Central);
+            assert_eq!(
+                event.peer_bd_addr,
+                hci::BdAddrType::Public(hci::BdAddr([0x03, 0x04, 0x05, 0x06, 0x07, 0x08]))
+            );
+
+            assert_eq!(event.central_clock_accuracy, CentralClockAccuracy::Ppm500);
+        }
+        other => panic!("Did not get LE connection complete: {:?}", other),
+    }
+}
+
+#[test]
 fn le_connection_complete_failed_bad_role() {
     let buffer = [
         0x3E, 19, 0x01, 0x00, 0x01, 0x02, 0x02, 0x00, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
-        0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x00,
+        0x00, 0x0B, 0x00, 0x0D, 0x0A, 0x00,
     ];
     match TestEvent::new(Packet(&buffer)) {
         Err(Error::BadLeConnectionRole(code)) => assert_eq!(code, 0x02),
@@ -291,7 +313,7 @@ fn le_connection_complete_failed_bad_role() {
 fn le_connection_complete_failed_bad_address_type() {
     let buffer = [
         0x3E, 19, 0x01, 0x00, 0x01, 0x02, 0x00, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
-        0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x00,
+        0x00, 0x0B, 0x00, 0x0D, 0x0A, 0x00,
     ];
     match TestEvent::new(Packet(&buffer)) {
         Err(Error::BadLeAddressType(code)) => assert_eq!(code, 0x02),

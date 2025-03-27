@@ -449,6 +449,6 @@ impl<'a> L2CapCocTxData<'a> {
 
         bytes[0] = self.channel_index;
         LittleEndian::write_u16(&mut bytes[1..], self.length);
-        bytes[3..3+self.data.len()].copy_from_slice(&self.data);
+        bytes[3..3+self.data.len()].copy_from_slice(self.data);
     }
 }
