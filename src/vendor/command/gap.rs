@@ -1617,8 +1617,8 @@ impl DirectConnectableParameters {
     const LENGTH: usize = 13;
 
     fn validate(&self) -> Result<(), Error> {
-        const MIN_DURATION: Duration = Duration::from_millis(20);
-        const MAX_DURATION: Duration = Duration::from_millis(10240);
+        const MIN_DURATION: Duration = Duration::from_micros(3750);
+        const MAX_DURATION: Duration = Duration::from_millis(1280);
 
         match self.advertising_type {
             AdvertisingType::ConnectableDirectedHighDutyCycle

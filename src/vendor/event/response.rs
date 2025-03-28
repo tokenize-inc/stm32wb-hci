@@ -906,6 +906,17 @@ pub struct GapBondedDevices {
     address_buffer: [crate::BdAddrType; MAX_ADDRESSES],
 }
 
+impl Default for GapBondedDevices {
+    fn default() -> Self {
+        Self {
+            status: crate::Status::Success,
+            address_count: 0,
+            address_buffer: [crate::BdAddrType::Public(crate::BdAddr([0, 0, 0, 0, 0, 0]));
+                MAX_ADDRESSES],
+        }
+    }
+}
+
 // Max packet size (255 bytes) less non-address data (4 bytes) divided by peer address size (7):
 const MAX_ADDRESSES: usize = 35;
 

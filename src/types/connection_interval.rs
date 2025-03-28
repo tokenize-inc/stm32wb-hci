@@ -292,6 +292,16 @@ pub struct FixedConnectionInterval {
     supervision_timeout_: Duration,
 }
 
+impl Default for FixedConnectionInterval {
+    fn default() -> Self {
+        Self {
+            interval_: Duration::from_millis(10),
+            conn_latency_: 0,
+            supervision_timeout_: Duration::from_millis(10),
+        }
+    }
+}
+
 impl FixedConnectionInterval {
     /// Deserializes the connection interval from the given byte buffer.
     ///
