@@ -1207,7 +1207,7 @@ impl<T: Controller> GapCommands for T {
 
         bytes[0] = list_entries.len() as u8;
 
-        let mut index = 0;
+        let mut index = 1;
         for entry in list_entries {
             entry.copy_into_slice(&mut bytes[index..index + 7]);
             index += 7;
