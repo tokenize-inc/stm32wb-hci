@@ -174,6 +174,14 @@ pub enum VendorReturnParameters {
     GapIsDeviceBonded(crate::Status),
 
     /// Parameters returned by the
+    /// [GAP Add Devices To List](crate::vendor::command::gap::GapCommands::add_devices_to_list) command.
+    GapAddDevicesToList(crate::Status),
+
+    /// Parameters returned by the
+    /// [GAP Add Devices To Resolving List](crate::vendor::command::gap::GapCommands::add_devices_to_resolving_list) command.
+    GapAddDevicesToResolvingList(crate::Status),
+
+    /// Parameters returned by the
     /// [GATT Init](crate::vendor::command::gatt::GattCommands::init) command.
     GattInit(crate::Status),
 
@@ -399,6 +407,12 @@ impl VendorReturnParameters {
             crate::vendor::opcode::GAP_IS_DEVICE_BONDED => Ok(
                 VendorReturnParameters::GapIsDeviceBonded(to_status(&bytes[3..])?),
             ),
+            crate::vendor::opcode::GAP_ADD_DEVICES_TO_LIST => Ok(
+                VendorReturnParameters::GapAddDevicesToList(to_status(&bytes[3..])?),
+            ),
+            crate::vendor::opcode::GAP_ADD_DEVICES_TO_RESOLVING_LIST => Ok(
+                VendorReturnParameters::GapAddDevicesToResolvingList(to_status(&bytes[3..])?),
+            ),
             crate::vendor::opcode::GATT_INIT => {
                 Ok(VendorReturnParameters::GattInit(to_status(&bytes[3..])?))
             }
@@ -469,22 +483,28 @@ impl VendorReturnParameters {
                 )?),
             ),
             crate::vendor::opcode::L2CAP_COC_CONNECT => Ok(
-                VendorReturnParameters::L2CapCocConnect(to_status(
-                    &bytes[3..],
-                )?),
+                VendorReturnParameters::L2CapCocConnect(to_status(&bytes[3..])?),
             ),
-            crate::vendor::opcode::L2CAP_COC_CONNECT_CONFIRM => Ok(VendorReturnParameters::L2CapCocConnectConfirm(to_coc_connect_confirm(&bytes[3..])?))
-            ,
-            crate::vendor::opcode::L2CAP_COC_RECONFIG => Ok(VendorReturnParameters::L2CapCocReconfig(to_status(&bytes[3..])?))
-            ,
-            crate::vendor::opcode::L2CAP_COC_RECONFIG_CONFIRM => Ok(VendorReturnParameters::L2CapCocReconfigConfirm(to_status(&bytes[3..])?))
-            ,
-            crate::vendor::opcode::L2CAP_COC_FLOW_CONTROL => Ok(VendorReturnParameters::L2CapCocFlowControl(to_status(&bytes[3..])?))
-            ,
-            crate::vendor::opcode::L2CAP_COC_TX_DATA => Ok(VendorReturnParameters::L2CapCocTxData(to_status(&bytes[3..])?))
-            ,
-            crate::vendor::opcode::L2CAP_COC_DISCONNECT => Ok(VendorReturnParameters::L2CapCocDisconnect(to_status(&bytes[3..])?))
-            ,
+            crate::vendor::opcode::L2CAP_COC_CONNECT_CONFIRM => {
+                Ok(VendorReturnParameters::L2CapCocConnectConfirm(
+                    to_coc_connect_confirm(&bytes[3..])?,
+                ))
+            }
+            crate::vendor::opcode::L2CAP_COC_RECONFIG => Ok(
+                VendorReturnParameters::L2CapCocReconfig(to_status(&bytes[3..])?),
+            ),
+            crate::vendor::opcode::L2CAP_COC_RECONFIG_CONFIRM => Ok(
+                VendorReturnParameters::L2CapCocReconfigConfirm(to_status(&bytes[3..])?),
+            ),
+            crate::vendor::opcode::L2CAP_COC_FLOW_CONTROL => Ok(
+                VendorReturnParameters::L2CapCocFlowControl(to_status(&bytes[3..])?),
+            ),
+            crate::vendor::opcode::L2CAP_COC_TX_DATA => Ok(VendorReturnParameters::L2CapCocTxData(
+                to_status(&bytes[3..])?,
+            )),
+            crate::vendor::opcode::L2CAP_COC_DISCONNECT => Ok(
+                VendorReturnParameters::L2CapCocDisconnect(to_status(&bytes[3..])?),
+            ),
             other => Err(crate::event::Error::UnknownOpcode(other)),
         }
     }
@@ -1131,7 +1151,11 @@ fn to_coc_connect_confirm(bytes: &[u8]) -> Result<CocConnectConfirm, crate::even
     let value_len = bytes[1] as usize;
     require_len!(bytes, 2 + value_len);
 
-    let mut confirm = CocConnectConfirm{ status, value_buf: [0u8;CocConnectConfirm::MAX_NUM_CHANNELS], value_len };
+    let mut confirm = CocConnectConfirm {
+        status,
+        value_buf: [0u8; CocConnectConfirm::MAX_NUM_CHANNELS],
+        value_len,
+    };
     confirm.value_buf[..value_len].copy_from_slice(&bytes[2..]);
 
     Ok(confirm)
