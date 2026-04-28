@@ -1499,8 +1499,6 @@ impl<'a, 'b> DiscoverableParameters<'a, 'b> {
             },
         );
 
-        defmt::error!("Advertising data {=[u8]:02x}", &bytes[..len]);
-
         len
     }
 
