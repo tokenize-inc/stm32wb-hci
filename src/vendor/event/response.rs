@@ -182,6 +182,30 @@ pub enum VendorReturnParameters {
     GapAddDevicesToResolvingList(crate::Status),
 
     /// Parameters returned by the
+    /// [GAP Adv Clear Sets](crate::vendor::command::gap::GapCommands::adv_clear_sets) command.
+    GapAdvClearSets(crate::Status),
+
+    /// Parameters returned by the
+    /// [GAP Adv Set Configuration](crate::vendor::command::gap::GapCommands::adv_set_configuration) command.
+    GapAdvSetConfiguration(crate::Status),
+
+    /// Parameters returned by the
+    /// [GAP Adv Set Enable](crate::vendor::command::gap::GapCommands::adv_set_enable) command.
+    GapAdvSetEnable(crate::Status),
+
+    /// Parameters returned by the
+    /// [GAP Adv Set Adv Data](crate::vendor::command::gap::GapCommands::adv_set_adv_data) command.
+    GapAdvSetAdvData(crate::Status),
+    
+    /// Parameters returned by the
+    /// [GAP Adv Set Scan Response Data](crate::vendor::command::gap::GapCommands::adv_set_scan_response_data) command.
+    GapAdvSetScanResponseData(crate::Status),
+    
+    /// Parameters returned by the
+    /// [GAP Adv Remove Set](crate::vendor::command::gap::GapCommands::adv_remove_set) command.
+    GapAdvRemoveSet(crate::Status),
+
+    /// Parameters returned by the
     /// [GATT Init](crate::vendor::command::gatt::GattCommands::init) command.
     GattInit(crate::Status),
 
@@ -504,6 +528,24 @@ impl VendorReturnParameters {
             )),
             crate::vendor::opcode::L2CAP_COC_DISCONNECT => Ok(
                 VendorReturnParameters::L2CapCocDisconnect(to_status(&bytes[3..])?),
+            ),
+            crate::vendor::opcode::GAP_ADV_SET_CONFIGURATION => Ok(
+                VendorReturnParameters::GapAdvSetConfiguration(to_status(&bytes[3..])?),
+            ),
+            crate::vendor::opcode::GAP_ADV_SET_ENABLE => Ok(
+                VendorReturnParameters::GapAdvSetEnable(to_status(&bytes[3..])?),
+            ),
+            crate::vendor::opcode::GAP_ADV_SET_ADV_DATA => Ok(
+                VendorReturnParameters::GapAdvSetAdvData(to_status(&bytes[3..])?),
+            ),
+            crate::vendor::opcode::GAP_ADV_SET_SCAN_RESPONSE_DATA => Ok(
+                VendorReturnParameters::GapAdvSetScanResponseData(to_status(&bytes[3..])?),
+            ),
+            crate::vendor::opcode::GAP_ADV_REMOVE_SET => Ok(
+                VendorReturnParameters::GapAdvRemoveSet(to_status(&bytes[3..])?),
+            ),
+            crate::vendor::opcode::GAP_ADV_CLEAR_SETS => Ok(
+                VendorReturnParameters::GapAdvClearSets(to_status(&bytes[3..])?),
             ),
             other => Err(crate::event::Error::UnknownOpcode(other)),
         }

@@ -33,7 +33,7 @@ pub mod command;
 use crate::types::{ConnectionIntervalError, FixedConnectionInterval};
 use crate::vendor::event::VendorEvent;
 use crate::vendor::VendorError;
-use crate::{BadStatusError, ConnectionHandle, Status};
+use crate::{AdvertisingHandle, BadStatusError, ConnectionHandle, Status};
 use byteorder::{ByteOrder, LittleEndian};
 use core::convert::{TryFrom, TryInto};
 use core::fmt::{Debug, Formatter, Result as FmtResult};
@@ -114,12 +114,12 @@ pub enum Event {
     /// Vol 2, Part E, Section 7.7.65.12
     LePhyUpdateComplete(LePhyUpdateComplete),
 
-    // TODO: le_enhanced_connection_complete
+    /// Vol 4, Part E, Section 7.7.65.18
+    LeAdvertisingSetTerminated(LeAdvertisingSetTerminated),
+
     // TODO: le_directed_advertising_report
-    // TODO: le_phy_update_complete
     // TODO: le_extended_advertising_report
     // TODO: le_scan_timeout
-    // TODO: le_advertising_set_terminated
     // TODO: le_scan_reauest_received
     // TODO: le_channel_selection_algorithm
     /// Vendor-specific events (opcode 0xFF)
@@ -329,6 +329,9 @@ fn to_le_meta_event(payload: &[u8]) -> Result<Event, Error> {
         0x0C => Ok(Event::LePhyUpdateComplete(to_le_phy_update_complete(
             payload,
         )?)),
+        0x12 => Ok(Event::LeAdvertisingSetTerminated(
+            to_le_advertising_set_terminated(payload)?,
+        )),
 
         _ => Err(Error::UnknownEvent(payload[0])),
     }
@@ -1161,11 +1164,18 @@ pub struct LeConnectionUpdateComplete {
 
 fn to_le_connection_update_complete(payload: &[u8]) -> Result<LeConnectionUpdateComplete, Error> {
     require_len!(payload, 10);
+    // When `status` indicates failure, the spec leaves the remaining fields
+    // (including `conn_interval`) as all-zero. Treat that as the default rather
+    // than rejecting the event with `BadConnectionInterval`.
+    let conn_interval = if payload[4..10].iter().all(|&x| x == 0) {
+        FixedConnectionInterval::default()
+    } else {
+        FixedConnectionInterval::from_bytes(&payload[4..10]).map_err(Error::BadConnectionInterval)?
+    };
     Ok(LeConnectionUpdateComplete {
         status: payload[1].try_into().map_err(rewrap_bad_status)?,
         conn_handle: ConnectionHandle(LittleEndian::read_u16(&payload[2..])),
-        conn_interval: FixedConnectionInterval::from_bytes(&payload[4..10])
-            .map_err(Error::BadConnectionInterval)?,
+        conn_interval,
     })
 }
 
@@ -1327,6 +1337,46 @@ fn to_le_phy_update_complete(payload: &[u8]) -> Result<LePhyUpdateComplete, Erro
     })
 }
 
+/// The LE Advertising Set Terminated event indicates that the Controller has
+/// terminated advertising in the advertising sets specified by the
+/// [adv_handle](LeAdvertisingSetTerminated::adv_handle) parameter.
+///
+/// Defined in Vol 4, Part E, Section 7.7.65.18 of the spec.
+#[derive(Copy, Clone, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct LeAdvertisingSetTerminated {
+    /// Status of the advertising set termination.
+    pub status: Status,
+
+    /// Identifies the advertising set that has terminated.
+    pub adv_handle: AdvertisingHandle,
+
+    /// Connection handle of the connection whose creation caused the advertising
+    /// set to terminate. `None` if the set terminated for any other reason
+    /// (Controller transmits 0xFFFF in that case).
+    pub conn_handle: Option<ConnectionHandle>,
+
+    /// Number of completed extended advertising events transmitted by the
+    /// Controller.
+    pub num_completed_extended_adv_events: u8,
+}
+
+fn to_le_advertising_set_terminated(payload: &[u8]) -> Result<LeAdvertisingSetTerminated, Error> {
+    require_len!(payload, 6);
+
+    let raw_handle = LittleEndian::read_u16(&payload[3..]);
+    Ok(LeAdvertisingSetTerminated {
+        status: payload[1].try_into().map_err(rewrap_bad_status)?,
+        adv_handle: AdvertisingHandle(payload[2]),
+        conn_handle: if raw_handle == 0xFFFF {
+            None
+        } else {
+            Some(ConnectionHandle(raw_handle))
+        },
+        num_completed_extended_adv_events: payload[5],
+    })
+}
+
 fn to_le_read_local_p256_public_key(payload: &[u8]) -> Result<[u8; 64], Error> {
     require_len!(payload, 65);
 
@@ -1421,6 +1471,15 @@ fn to_le_enhanced_connection_complete(
         .0
         .copy_from_slice(&payload[18..24]);
 
+    // When `status` indicates failure, the spec leaves the remaining fields
+    // (including `conn_interval`) as all-zero. Treat that as the default rather
+    // than rejecting the event with `BadConnectionInterval`.
+    let conn_interval = if payload[24..30].iter().all(|&x| x == 0) {
+        FixedConnectionInterval::default()
+    } else {
+        FixedConnectionInterval::from_bytes(&payload[24..30]).map_err(Error::BadConnectionInterval)?
+    };
+
     Ok(LeEnhancedConnectionComplete {
         status: payload[1].try_into().map_err(rewrap_bad_status)?,
         conn_handle: ConnectionHandle(LittleEndian::read_u16(&payload[2..])),
@@ -1429,8 +1488,7 @@ fn to_le_enhanced_connection_complete(
             .map_err(rewrap_bd_addr_type_err)?,
         local_resolvable_private_address,
         peer_resolvable_private_address,
-        conn_interval: FixedConnectionInterval::from_bytes(&payload[24..30])
-            .map_err(Error::BadConnectionInterval)?,
+        conn_interval,
         central_clock_accuracy: payload[30].try_into()?,
     })
 }
