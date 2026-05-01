@@ -500,14 +500,35 @@ pub struct AdvertisingHandle(pub u8);
 pub struct BdAddr(pub [u8; 6]);
 
 /// Potential values for BDADDR
+///
+/// The four variants correspond to the four `Peer_Address_Type` /
+/// `Initiator_Address_Type` / `Own_Address_Type` byte values defined for
+/// the HCI commands that take a Bluetooth address.
+///
+/// `PublicIdentity` and `RandomIdentity` are required when the local
+/// device has privacy enabled and wants the controller to derive a
+/// Resolvable Private Address from the peer's IRK in the resolving list
+/// (Bluetooth Core Spec Vol 6 Part B §6).  Without these, the literal
+/// identity address is placed in `TargetA` of `ADV_DIRECT_IND` PDUs and
+/// peers running with privacy will not recognize themselves as the target.
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum BdAddrType {
-    /// Public address.
+    /// Public Device Address (literal). Encoded as 0x00.
     Public(BdAddr),
 
-    /// Random address.
+    /// Random Device Address (literal). Encoded as 0x01.
     Random(BdAddr),
+
+    /// Public Identity Address — controller will use the peer's IRK from
+    /// the resolving list to generate a Resolvable Private Address for
+    /// `TargetA`. Encoded as 0x02.
+    PublicIdentity(BdAddr),
+
+    /// Random (static) Identity Address — controller will use the peer's
+    /// IRK from the resolving list to generate a Resolvable Private
+    /// Address for `TargetA`. Encoded as 0x03.
+    RandomIdentity(BdAddr),
 }
 
 impl BdAddrType {
@@ -522,6 +543,14 @@ impl BdAddrType {
             }
             BdAddrType::Random(addr) => {
                 bytes[0] = 1;
+                bytes[1..7].copy_from_slice(&addr.0);
+            }
+            BdAddrType::PublicIdentity(addr) => {
+                bytes[0] = 2;
+                bytes[1..7].copy_from_slice(&addr.0);
+            }
+            BdAddrType::RandomIdentity(addr) => {
+                bytes[0] = 3;
                 bytes[1..7].copy_from_slice(&addr.0);
             }
         }
@@ -543,6 +572,8 @@ pub fn to_bd_addr_type(bd_addr_type: u8, addr: BdAddr) -> Result<BdAddrType, BdA
     match bd_addr_type {
         0 => Ok(BdAddrType::Public(addr)),
         1 => Ok(BdAddrType::Random(addr)),
+        2 => Ok(BdAddrType::PublicIdentity(addr)),
+        3 => Ok(BdAddrType::RandomIdentity(addr)),
         _ => Err(BdAddrTypeError(bd_addr_type)),
     }
 }
