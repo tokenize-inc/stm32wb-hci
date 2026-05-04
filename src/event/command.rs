@@ -433,9 +433,15 @@ fn to_status(bytes: &[u8]) -> Result<Status, crate::event::Error> {
 fn to_le_read_resolvable_address(
     bytes: &[u8],
 ) -> Result<LeReadResolvableAddress, crate::event::Error> {
-    let address = to_bd_addr(bytes.get(1..).unwrap_or(&[]))?;
     let status = to_status(bytes)?;
-    Ok(LeReadResolvableAddress { status, address })
+    let mut addr = [0u8; 6];
+    if bytes.len() >= 7 {
+        addr.copy_from_slice(&bytes[1..7]);
+    }
+    Ok(LeReadResolvableAddress {
+        status,
+        address: crate::BdAddr(addr),
+    })
 }
 
 /// Values returned by the [Read Transmit Power Level](crate::host::HostHci::read_tx_power_level)
