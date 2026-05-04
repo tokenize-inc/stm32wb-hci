@@ -101,6 +101,85 @@ status_only! {
                                        ReturnParameters::LeSetHostChannelClassification);
     le_receiver_test(0x1D, 0x20, ReturnParameters::LeReceiverTest);
     le_transmitter_test(0x1E, 0x20, ReturnParameters::LeTransmitterTest);
+    le_add_device_to_resolving_list(0x27, 0x20, ReturnParameters::LeAddDeviceToResolvingList);
+    le_remove_device_from_resolving_list(0x28, 0x20,
+                                         ReturnParameters::LeRemoveDeviceFromResolvingList);
+    le_clear_resolving_list(0x29, 0x20, ReturnParameters::LeClearResolvingList);
+    le_set_address_resolution_enable(0x2D, 0x20, ReturnParameters::LeSetAddressResolutionEnable);
+    le_set_privacy_mode(0x4E, 0x20, ReturnParameters::LeSetPrivacyMode);
+}
+
+#[test]
+fn le_read_resolving_list_size() {
+    let buffer = [0x0E, 5, 1, 0x2A, 0x20, 0x00, 0x0F];
+    match Event::new(Packet(&buffer)) {
+        Ok(Event::CommandComplete(event)) => {
+            assert_eq!(event.num_hci_command_packets, 1);
+            match event.return_params {
+                ReturnParameters::LeReadResolvingListSize(params) => {
+                    assert_eq!(params.status, hci::Status::Success);
+                    assert_eq!(params.size, 0x0F);
+                }
+                other => panic!(
+                    "Did not get LE Read Resolving List Size return params: {:?}",
+                    other
+                ),
+            }
+        }
+        other => panic!("Did not get command complete event: {:?}", other),
+    }
+}
+
+#[test]
+fn le_read_peer_resolvable_address() {
+    let buffer = [
+        0x0E, 10, 1, 0x2B, 0x20, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+    ];
+    match Event::new(Packet(&buffer)) {
+        Ok(Event::CommandComplete(event)) => {
+            assert_eq!(event.num_hci_command_packets, 1);
+            match event.return_params {
+                ReturnParameters::LeReadPeerResolvableAddress(params) => {
+                    assert_eq!(params.status, hci::Status::Success);
+                    assert_eq!(
+                        params.address,
+                        hci::BdAddr([0x01, 0x02, 0x03, 0x04, 0x05, 0x06])
+                    );
+                }
+                other => panic!(
+                    "Did not get LE Read Peer Resolvable Address return params: {:?}",
+                    other
+                ),
+            }
+        }
+        other => panic!("Did not get command complete event: {:?}", other),
+    }
+}
+
+#[test]
+fn le_read_local_resolvable_address() {
+    let buffer = [
+        0x0E, 10, 1, 0x2C, 0x20, 0x00, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+    ];
+    match Event::new(Packet(&buffer)) {
+        Ok(Event::CommandComplete(event)) => {
+            assert_eq!(event.num_hci_command_packets, 1);
+            match event.return_params {
+                ReturnParameters::LeReadLocalResolvableAddress(params) => {
+                    assert_eq!(params.status, hci::Status::Success);
+                    assert_eq!(
+                        params.address,
+                        hci::BdAddr([0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F])
+                    );
+                }
+                other => panic!(
+                    "Did not get LE Read Local Resolvable Address return params: {:?}",
+                    other
+                ),
+            }
+        }
+        other => panic!("Did not get command complete event: {:?}", other),
+    }
 }
 
 #[test]
