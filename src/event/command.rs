@@ -179,9 +179,10 @@ impl CommandComplete {
                 ReturnParameters::LeClearResolvingList(to_status(&bytes[3..])?)
             }
             crate::opcode::LE_READ_RESOLVING_LIST_SIZE => {
+                require_len!(bytes, 5);
                 ReturnParameters::LeReadResolvingListSize(LeReadResolvingListSize {
                     status: to_status(&bytes[3..])?,
-                    size: bytes.get(4).copied().unwrap_or(0),
+                    size: bytes[4],
                 })
             }
             crate::opcode::LE_READ_PEER_RESOLVABLE_ADDRESS => {
@@ -432,15 +433,9 @@ fn to_status(bytes: &[u8]) -> Result<Status, crate::event::Error> {
 fn to_le_read_resolvable_address(
     bytes: &[u8],
 ) -> Result<LeReadResolvableAddress, crate::event::Error> {
+    let address = to_bd_addr(bytes.get(1..).unwrap_or(&[]))?;
     let status = to_status(bytes)?;
-    let mut addr = [0u8; 6];
-    if bytes.len() >= 7 {
-        addr.copy_from_slice(&bytes[1..7]);
-    }
-    Ok(LeReadResolvableAddress {
-        status,
-        address: crate::BdAddr(addr),
-    })
+    Ok(LeReadResolvableAddress { status, address })
 }
 
 /// Values returned by the [Read Transmit Power Level](crate::host::HostHci::read_tx_power_level)
