@@ -1109,6 +1109,105 @@ pub trait HostHci {
     async fn le_set_data_length(&mut self, conn_handle: ConnectionHandle, max_tx_octets: u16, max_tx_time: u16);
     async fn le_write_suggested_default_data_length(&mut self, max_tx_octets: u16, max_tx_time: u16);
     async fn le_set_default_phy(&mut self, all_phys: u8, tx_phys: u8, rx_phys: u8);
+
+    /// Enable or disable address resolution in the Controller.
+    ///
+    /// When enabled, the Controller resolves the peer's Resolvable Private
+    /// Address using IRKs in the resolving list, and generates RPAs for
+    /// itself when `OwnAddressType` in advertising / scan / connection
+    /// commands is set to `PrivateFallbackPublic` or
+    /// `PrivateFallbackRandom`.
+    ///
+    /// See the Bluetooth Core Spec, Vol 4 Part E, §7.8.44 (LE Set Address
+    /// Resolution Enable).
+    async fn le_set_address_resolution_enable(&mut self, enable: bool);
+
+    /// Add a device to the Controller's resolving list.
+    ///
+    /// `peer_identity_address` is the peer's identity address (must be
+    /// `Public` or `Random`; the identity-bearing variants are not
+    /// accepted here). `peer_irk` is the IRK distributed by the peer
+    /// during SMP key distribution. `local_irk` is the IRK this
+    /// Controller will use when generating its own RPAs while talking to
+    /// this peer.
+    ///
+    /// Address resolution must be disabled (via
+    /// [`le_set_address_resolution_enable`](HostHci::le_set_address_resolution_enable))
+    /// while modifying the resolving list, or the command may be
+    /// rejected with Command Disallowed.
+    ///
+    /// See the Bluetooth Core Spec, Vol 4 Part E, §7.8.38.
+    async fn le_add_device_to_resolving_list(
+        &mut self,
+        peer_identity_address: crate::BdAddrType,
+        peer_irk: [u8; 16],
+        local_irk: [u8; 16],
+    );
+
+    /// Remove a device from the Controller's resolving list.
+    ///
+    /// See the Bluetooth Core Spec, Vol 4 Part E, §7.8.39.
+    async fn le_remove_device_from_resolving_list(
+        &mut self,
+        peer_identity_address: crate::BdAddrType,
+    );
+
+    /// Clear all entries in the Controller's resolving list.
+    ///
+    /// See the Bluetooth Core Spec, Vol 4 Part E, §7.8.40.
+    async fn le_clear_resolving_list(&mut self);
+
+    /// Read the maximum number of entries supported by the Controller's
+    /// resolving list.
+    ///
+    /// See the Bluetooth Core Spec, Vol 4 Part E, §7.8.41.
+    async fn le_read_resolving_list_size(&mut self);
+
+    /// Read the current Resolvable Private Address being used by the peer
+    /// for the specified identity address.
+    ///
+    /// See the Bluetooth Core Spec, Vol 4 Part E, §7.8.42.
+    async fn le_read_peer_resolvable_address(
+        &mut self,
+        peer_identity_address: crate::BdAddrType,
+    );
+
+    /// Read the current Resolvable Private Address being used by the
+    /// local Controller for the specified peer identity address.
+    ///
+    /// See the Bluetooth Core Spec, Vol 4 Part E, §7.8.43.
+    async fn le_read_local_resolvable_address(
+        &mut self,
+        peer_identity_address: crate::BdAddrType,
+    );
+
+    /// Set the privacy mode used by the Controller for the specified
+    /// peer identity. `network` privacy is the default; `device` privacy
+    /// allows the peer to use either an RPA or its identity address as
+    /// `AdvA` and still be accepted.
+    ///
+    /// See the Bluetooth Core Spec, Vol 4 Part E, §7.8.77.
+    async fn le_set_privacy_mode(
+        &mut self,
+        peer_identity_address: crate::BdAddrType,
+        mode: PrivacyMode,
+    );
+}
+
+/// Privacy mode for a peer in the resolving list.
+///
+/// See [`HostHci::le_set_privacy_mode`].
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum PrivacyMode {
+    /// Network privacy mode (default). The peer must use an RPA;
+    /// directed advertising with the peer's literal identity address as
+    /// `TargetA` is rejected.
+    Network = 0x00,
+    /// Device privacy mode. The peer may use either an RPA or its
+    /// literal identity address.
+    Device = 0x01,
 }
 
 /// Errors that may occur when sending commands to the controller.  Must be specialized on the types
@@ -1554,6 +1653,79 @@ where
             .await;
     }
 
+    async fn le_set_address_resolution_enable(&mut self, enable: bool) {
+        self.controller_write(
+            crate::opcode::LE_SET_ADDRESS_RESOLUTION_ENABLE,
+            &[u8::from(enable)],
+        )
+        .await
+    }
+
+    async fn le_add_device_to_resolving_list(
+        &mut self,
+        peer_identity_address: crate::BdAddrType,
+        peer_irk: [u8; 16],
+        local_irk: [u8; 16],
+    ) {
+        let mut bytes = [0u8; 39];
+        peer_identity_address.copy_into_slice(&mut bytes[0..7]);
+        bytes[7..23].copy_from_slice(&peer_irk);
+        bytes[23..39].copy_from_slice(&local_irk);
+        self.controller_write(crate::opcode::LE_ADD_DEVICE_TO_RESOLVING_LIST, &bytes)
+            .await
+    }
+
+    async fn le_remove_device_from_resolving_list(
+        &mut self,
+        peer_identity_address: crate::BdAddrType,
+    ) {
+        let mut bytes = [0u8; 7];
+        peer_identity_address.copy_into_slice(&mut bytes);
+        self.controller_write(crate::opcode::LE_REMOVE_DEVICE_FROM_RESOLVING_LIST, &bytes)
+            .await
+    }
+
+    async fn le_clear_resolving_list(&mut self) {
+        self.controller_write(crate::opcode::LE_CLEAR_RESOLVING_LIST, &[])
+            .await
+    }
+
+    async fn le_read_resolving_list_size(&mut self) {
+        self.controller_write(crate::opcode::LE_READ_RESOLVING_LIST_SIZE, &[])
+            .await
+    }
+
+    async fn le_read_peer_resolvable_address(
+        &mut self,
+        peer_identity_address: crate::BdAddrType,
+    ) {
+        let mut bytes = [0u8; 7];
+        peer_identity_address.copy_into_slice(&mut bytes);
+        self.controller_write(crate::opcode::LE_READ_PEER_RESOLVABLE_ADDRESS, &bytes)
+            .await
+    }
+
+    async fn le_read_local_resolvable_address(
+        &mut self,
+        peer_identity_address: crate::BdAddrType,
+    ) {
+        let mut bytes = [0u8; 7];
+        peer_identity_address.copy_into_slice(&mut bytes);
+        self.controller_write(crate::opcode::LE_READ_LOCAL_RESOLVABLE_ADDRESS, &bytes)
+            .await
+    }
+
+    async fn le_set_privacy_mode(
+        &mut self,
+        peer_identity_address: crate::BdAddrType,
+        mode: PrivacyMode,
+    ) {
+        let mut bytes = [0u8; 8];
+        peer_identity_address.copy_into_slice(&mut bytes[0..7]);
+        bytes[7] = mode as u8;
+        self.controller_write(crate::opcode::LE_SET_PRIVACY_MODE, &bytes)
+            .await
+    }
 }
 
 const MAX_TEST_CHANNEL: u8 = 0x27;

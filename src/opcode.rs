@@ -101,6 +101,14 @@ opcodes! {
         pub const LE_TEST_END = 0x001F;
         pub const LE_SET_DATA_LENGTH = 0x0022;
         pub const LE_WRITE_SUGGESTED_DEFAULT_DATA_LENGTH = 0x0024;
+        pub const LE_ADD_DEVICE_TO_RESOLVING_LIST = 0x0027;
+        pub const LE_REMOVE_DEVICE_FROM_RESOLVING_LIST = 0x0028;
+        pub const LE_CLEAR_RESOLVING_LIST = 0x0029;
+        pub const LE_READ_RESOLVING_LIST_SIZE = 0x002A;
+        pub const LE_READ_PEER_RESOLVABLE_ADDRESS = 0x002B;
+        pub const LE_READ_LOCAL_RESOLVABLE_ADDRESS = 0x002C;
+        pub const LE_SET_ADDRESS_RESOLUTION_ENABLE = 0x002D;
         pub const LE_SET_DEFAULT_PHY = 0x0031;
+        pub const LE_SET_PRIVACY_MODE = 0x004E;
     }
 }

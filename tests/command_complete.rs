@@ -101,7 +101,7 @@ status_only! {
                                        ReturnParameters::LeSetHostChannelClassification);
     le_receiver_test(0x1D, 0x20, ReturnParameters::LeReceiverTest);
     le_transmitter_test(0x1E, 0x20, ReturnParameters::LeTransmitterTest);
-}
+    }
 
 #[test]
 fn read_tx_power_level() {

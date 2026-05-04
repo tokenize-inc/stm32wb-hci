@@ -166,6 +166,38 @@ impl CommandComplete {
             crate::opcode::LE_SET_DEFAULT_PHY => {
                 ReturnParameters::LeSetDefaultPhy(to_status(&bytes[3..])?)
             }
+            crate::opcode::LE_SET_ADDRESS_RESOLUTION_ENABLE => {
+                ReturnParameters::LeSetAddressResolutionEnable(to_status(&bytes[3..])?)
+            }
+            crate::opcode::LE_ADD_DEVICE_TO_RESOLVING_LIST => {
+                ReturnParameters::LeAddDeviceToResolvingList(to_status(&bytes[3..])?)
+            }
+            crate::opcode::LE_REMOVE_DEVICE_FROM_RESOLVING_LIST => {
+                ReturnParameters::LeRemoveDeviceFromResolvingList(to_status(&bytes[3..])?)
+            }
+            crate::opcode::LE_CLEAR_RESOLVING_LIST => {
+                ReturnParameters::LeClearResolvingList(to_status(&bytes[3..])?)
+            }
+            crate::opcode::LE_READ_RESOLVING_LIST_SIZE => {
+                require_len!(bytes, 5);
+                ReturnParameters::LeReadResolvingListSize(LeReadResolvingListSize {
+                    status: to_status(&bytes[3..])?,
+                    size: bytes[4],
+                })
+            }
+            crate::opcode::LE_READ_PEER_RESOLVABLE_ADDRESS => {
+                ReturnParameters::LeReadPeerResolvableAddress(to_le_read_resolvable_address(
+                    &bytes[3..],
+                )?)
+            }
+            crate::opcode::LE_READ_LOCAL_RESOLVABLE_ADDRESS => {
+                ReturnParameters::LeReadLocalResolvableAddress(to_le_read_resolvable_address(
+                    &bytes[3..],
+                )?)
+            }
+            crate::opcode::LE_SET_PRIVACY_MODE => {
+                ReturnParameters::LeSetPrivacyMode(to_status(&bytes[3..])?)
+            }
             other => {
                 if other.ogf() != VENDOR_OGF {
                     return Err(crate::event::Error::UnknownOpcode(other));
@@ -322,12 +354,94 @@ pub enum ReturnParameters {
 
     LeSetDefaultPhy(Status),
 
+    /// Status returned by the
+    /// [LE Set Address Resolution Enable](crate::host::HostHci::le_set_address_resolution_enable)
+    /// command.
+    LeSetAddressResolutionEnable(Status),
+
+    /// Status returned by the
+    /// [LE Add Device To Resolving List](crate::host::HostHci::le_add_device_to_resolving_list)
+    /// command.
+    LeAddDeviceToResolvingList(Status),
+
+    /// Status returned by the
+    /// [LE Remove Device From Resolving List](crate::host::HostHci::le_remove_device_from_resolving_list)
+    /// command.
+    LeRemoveDeviceFromResolvingList(Status),
+
+    /// Status returned by the
+    /// [LE Clear Resolving List](crate::host::HostHci::le_clear_resolving_list)
+    /// command.
+    LeClearResolvingList(Status),
+
+    /// Parameters returned by the
+    /// [LE Read Resolving List Size](crate::host::HostHci::le_read_resolving_list_size)
+    /// command.
+    LeReadResolvingListSize(LeReadResolvingListSize),
+
+    /// Parameters returned by the
+    /// [LE Read Peer Resolvable Address](crate::host::HostHci::le_read_peer_resolvable_address)
+    /// command.
+    LeReadPeerResolvableAddress(LeReadResolvableAddress),
+
+    /// Parameters returned by the
+    /// [LE Read Local Resolvable Address](crate::host::HostHci::le_read_local_resolvable_address)
+    /// command.
+    LeReadLocalResolvableAddress(LeReadResolvableAddress),
+
+    /// Status returned by the
+    /// [LE Set Privacy Mode](crate::host::HostHci::le_set_privacy_mode)
+    /// command.
+    LeSetPrivacyMode(Status),
+
     /// Parameters returned by vendor-specific commands.
     Vendor(crate::vendor::event::response::VendorReturnParameters),
 }
 
+/// Return parameters for
+/// [LE Read Resolving List Size](crate::host::HostHci::le_read_resolving_list_size).
+#[derive(Copy, Clone, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct LeReadResolvingListSize {
+    /// Did the command fail, and if so, how?
+    pub status: Status,
+
+    /// Maximum number of entries the Controller's resolving list can
+    /// hold.
+    pub size: u8,
+}
+
+/// Return parameters for
+/// [LE Read Peer Resolvable Address](crate::host::HostHci::le_read_peer_resolvable_address)
+/// and
+/// [LE Read Local Resolvable Address](crate::host::HostHci::le_read_local_resolvable_address).
+#[derive(Copy, Clone, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct LeReadResolvableAddress {
+    /// Did the command fail, and if so, how?
+    pub status: Status,
+
+    /// The currently-active Resolvable Private Address. Only meaningful
+    /// when `status == Success`.
+    pub address: crate::BdAddr,
+}
+
 fn to_status(bytes: &[u8]) -> Result<Status, crate::event::Error> {
     bytes[0].try_into().map_err(super::rewrap_bad_status)
+}
+
+fn to_le_read_resolvable_address(
+    bytes: &[u8],
+) -> Result<LeReadResolvableAddress, crate::event::Error> {
+    let status = to_status(bytes)?;
+    let mut addr = [0u8; 6];
+    if bytes.len() >= 7 {
+        addr.copy_from_slice(&bytes[1..7]);
+    }
+    Ok(LeReadResolvableAddress {
+        status,
+        address: crate::BdAddr(addr),
+    })
 }
 
 /// Values returned by the [Read Transmit Power Level](crate::host::HostHci::read_tx_power_level)
