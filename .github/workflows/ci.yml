@@ -23,5 +23,5 @@ jobs:
         with:
           toolchain: stable
           target: thumbv7em-none-eabihf
-      - run: cargo test --verbose --all
-      - run: cargo test --verbose --no-default-features --features=event-command-complete --test unparsed
+      - run: cargo test --verbose --all --target=x86_64-unknown-linux-gnu
+      - run: cargo test --verbose --target=x86_64-unknown-linux-gnu --no-default-features --features=event-command-complete --test unparsed
