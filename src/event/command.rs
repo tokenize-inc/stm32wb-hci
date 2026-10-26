@@ -507,17 +507,20 @@ pub enum ReturnParameters {
 
 /// Return parameters of a command whose decoder is disabled by its `return-*` cargo feature.
 ///
-/// Only the status is decoded, which every command with return parameters returns first.
+/// Only the status is decoded, for the commands whose return parameters start with one.
 #[derive(Copy, Clone, Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct UnparsedReturnParameters {
     /// Opcode of the command that completed.
     pub opcode: crate::opcode::Opcode,
 
-    /// Did the command fail, and if so, how?
-    pub status: Status,
+    /// Did the command fail, and if so, how? `None` for commands whose return parameters don't
+    /// start with a status, such as
+    /// [HAL Get PM Debug Info](crate::vendor::command::hal::HalCommands::get_pm_debug_info).
+    pub status: Option<Status>,
 }
 
+/// Return parameters that start with a status, whose decoder is disabled.
 pub(crate) fn to_unparsed(
     opcode: crate::opcode::Opcode,
     bytes: &[u8],
@@ -525,8 +528,18 @@ pub(crate) fn to_unparsed(
     require_len_at_least!(bytes, 1);
     Ok(UnparsedReturnParameters {
         opcode,
-        status: to_status(bytes)?,
+        status: Some(to_status(bytes)?),
     })
+}
+
+/// Return parameters that don't start with a status, whose decoder is disabled.
+pub(crate) fn to_unparsed_without_status(
+    opcode: crate::opcode::Opcode,
+) -> UnparsedReturnParameters {
+    UnparsedReturnParameters {
+        opcode,
+        status: None,
+    }
 }
 
 /// Return parameters for

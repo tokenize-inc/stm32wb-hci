@@ -8,6 +8,8 @@
     not(feature = "event-gatt-procedure-timeout"),
     not(feature = "return-reset"),
     not(feature = "return-gatt-init"),
+    not(feature = "return-hal-get-pm-debug-info"),
+    not(feature = "return-hal-read-radio-reg"),
 ))]
 
 extern crate stm32wb_hci as hci;
@@ -55,7 +57,7 @@ fn disabled_return_parameters() {
             ..
         })) => {
             assert_eq!(params.opcode, hci::Opcode(0x0C03));
-            assert_eq!(params.status, hci::Status::Success);
+            assert_eq!(params.status, Some(hci::Status::Success));
         }
         other => panic!("Did not get unparsed return parameters: {:?}", other),
     }
@@ -70,7 +72,38 @@ fn disabled_vendor_return_parameters() {
             ..
         })) => {
             assert_eq!(params.opcode, hci::Opcode(0xFD01));
-            assert_eq!(params.status, hci::Status::CommandDisallowed);
+            assert_eq!(params.status, Some(hci::Status::CommandDisallowed));
+        }
+        other => panic!("Did not get unparsed return parameters: {:?}", other),
+    }
+}
+
+#[test]
+fn disabled_vendor_return_parameters_without_status() {
+    // HAL Get PM Debug Info starts with a TX buffer count, not a status. A count of 1 must not be
+    // read as a status of `UnknownCommand`.
+    let buffer = [0x0E, 6, 1, 0x1C, 0xFC, 0x01, 0x02, 0x03];
+    match Event::new(Packet(&buffer)) {
+        Ok(Event::CommandComplete(command::CommandComplete {
+            return_params: ReturnParameters::Vendor(VendorReturnParameters::Unparsed(params)),
+            ..
+        })) => {
+            assert_eq!(params.opcode, hci::Opcode(0xFC1C));
+            assert_eq!(params.status, None);
+        }
+        other => panic!("Did not get unparsed return parameters: {:?}", other),
+    }
+
+    // HAL Read Radio Reg returns only the register value. 0x80 isn't a valid status, but must not
+    // be rejected as one.
+    let buffer = [0x0E, 4, 1, 0x30, 0xFC, 0x80];
+    match Event::new(Packet(&buffer)) {
+        Ok(Event::CommandComplete(command::CommandComplete {
+            return_params: ReturnParameters::Vendor(VendorReturnParameters::Unparsed(params)),
+            ..
+        })) => {
+            assert_eq!(params.opcode, hci::Opcode(0xFC30));
+            assert_eq!(params.status, None);
         }
         other => panic!("Did not get unparsed return parameters: {:?}", other),
     }

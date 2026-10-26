@@ -403,7 +403,7 @@ impl VendorReturnParameters {
                     VendorReturnParameters::HalGetPmDebugInfo(to_hal_pm_debug_info(&bytes[3..])?),
                 ),
                 Ok(VendorReturnParameters::Unparsed(
-                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                    crate::event::command::to_unparsed_without_status(opcode),
                 )),
             ),
             crate::vendor::opcode::HAL_READ_RSSI => gated!(
@@ -413,7 +413,7 @@ impl VendorReturnParameters {
                     bytes[3]
                 })),
                 Ok(VendorReturnParameters::Unparsed(
-                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                    crate::event::command::to_unparsed_without_status(opcode),
                 )),
             ),
             crate::vendor::opcode::HAL_READ_RADIO_REG => gated!(
@@ -423,7 +423,7 @@ impl VendorReturnParameters {
                     bytes[3]
                 })),
                 Ok(VendorReturnParameters::Unparsed(
-                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                    crate::event::command::to_unparsed_without_status(opcode),
                 )),
             ),
             crate::vendor::opcode::HAL_READ_RAW_RSSI => gated!(
@@ -433,7 +433,7 @@ impl VendorReturnParameters {
                     bytes[3]
                 })),
                 Ok(VendorReturnParameters::Unparsed(
-                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                    crate::event::command::to_unparsed_without_status(opcode),
                 )),
             ),
             crate::vendor::opcode::GAP_SET_NONDISCOVERABLE => gated!(
