@@ -57,147 +57,250 @@ impl CommandComplete {
     pub fn new(bytes: &[u8]) -> Result<CommandComplete, crate::event::Error> {
         require_len_at_least!(bytes, 3);
 
-        let params = match crate::opcode::Opcode(LittleEndian::read_u16(&bytes[1..])) {
+        let opcode = crate::opcode::Opcode(LittleEndian::read_u16(&bytes[1..]));
+        let params = match opcode {
             crate::opcode::Opcode(0x0000) => ReturnParameters::Spontaneous,
-            crate::opcode::SET_EVENT_MASK => {
-                ReturnParameters::SetEventMask(to_status(&bytes[3..])?)
-            }
-            crate::opcode::RESET => ReturnParameters::Reset(to_status(&bytes[3..])?),
-            crate::opcode::READ_TX_POWER_LEVEL => {
-                ReturnParameters::ReadTxPowerLevel(to_tx_power_level(&bytes[3..])?)
-            }
-            crate::opcode::READ_LOCAL_VERSION_INFO => {
-                ReturnParameters::ReadLocalVersionInformation(to_local_version_info(&bytes[3..])?)
-            }
-            crate::opcode::READ_LOCAL_SUPPORTED_COMMANDS => {
-                ReturnParameters::ReadLocalSupportedCommands(to_supported_commands(&bytes[3..])?)
-            }
-            crate::opcode::READ_LOCAL_SUPPORTED_FEATURES => {
-                ReturnParameters::ReadLocalSupportedFeatures(to_supported_features(&bytes[3..])?)
-            }
-            crate::opcode::READ_BD_ADDR => ReturnParameters::ReadBdAddr(to_bd_addr(&bytes[3..])?),
-            crate::opcode::READ_RSSI => ReturnParameters::ReadRssi(to_read_rssi(&bytes[3..])?),
-            crate::opcode::LE_SET_EVENT_MASK => {
-                ReturnParameters::LeSetEventMask(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_READ_BUFFER_SIZE => {
-                ReturnParameters::LeReadBufferSize(to_le_read_buffer_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_READ_LOCAL_SUPPORTED_FEATURES => {
+            crate::opcode::SET_EVENT_MASK => gated!(
+                "return-set-event-mask",
+                ReturnParameters::SetEventMask(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::RESET => gated!(
+                "return-reset",
+                ReturnParameters::Reset(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::READ_TX_POWER_LEVEL => gated!(
+                "return-read-tx-power-level",
+                ReturnParameters::ReadTxPowerLevel(to_tx_power_level(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::READ_LOCAL_VERSION_INFO => gated!(
+                "return-read-local-version-information",
+                ReturnParameters::ReadLocalVersionInformation(to_local_version_info(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::READ_LOCAL_SUPPORTED_COMMANDS => gated!(
+                "return-read-local-supported-commands",
+                ReturnParameters::ReadLocalSupportedCommands(to_supported_commands(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::READ_LOCAL_SUPPORTED_FEATURES => gated!(
+                "return-read-local-supported-features",
+                ReturnParameters::ReadLocalSupportedFeatures(to_supported_features(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::READ_BD_ADDR => gated!(
+                "return-read-bd-addr",
+                ReturnParameters::ReadBdAddr(to_bd_addr(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::READ_RSSI => gated!(
+                "return-read-rssi",
+                ReturnParameters::ReadRssi(to_read_rssi(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_SET_EVENT_MASK => gated!(
+                "return-le-set-event-mask",
+                ReturnParameters::LeSetEventMask(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_READ_BUFFER_SIZE => gated!(
+                "return-le-read-buffer-size",
+                ReturnParameters::LeReadBufferSize(to_le_read_buffer_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_READ_LOCAL_SUPPORTED_FEATURES => gated!(
+                "return-le-read-local-supported-features",
                 ReturnParameters::LeReadLocalSupportedFeatures(to_le_local_supported_features(
                     &bytes[3..],
-                )?)
-            }
-            crate::opcode::LE_SET_RANDOM_ADDRESS => {
-                ReturnParameters::LeSetRandomAddress(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_SET_ADVERTISING_PARAMETERS => {
-                ReturnParameters::LeSetAdvertisingParameters(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_READ_ADVERTISING_CHANNEL_TX_POWER => {
+                )?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_SET_RANDOM_ADDRESS => gated!(
+                "return-le-set-random-address",
+                ReturnParameters::LeSetRandomAddress(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_SET_ADVERTISING_PARAMETERS => gated!(
+                "return-le-set-advertising-parameters",
+                ReturnParameters::LeSetAdvertisingParameters(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_READ_ADVERTISING_CHANNEL_TX_POWER => gated!(
+                "return-le-read-advertising-channel-tx-power",
                 ReturnParameters::LeReadAdvertisingChannelTxPower(
                     to_le_advertising_channel_tx_power(&bytes[3..])?,
-                )
-            }
-            crate::opcode::LE_SET_ADVERTISING_DATA => {
-                ReturnParameters::LeSetAdvertisingData(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_SET_SCAN_RESPONSE_DATA => {
-                ReturnParameters::LeSetScanResponseData(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_SET_ADVERTISE_ENABLE => {
-                to_le_set_advertise_enable(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_SET_SCAN_PARAMETERS => {
-                ReturnParameters::LeSetScanParameters(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_SET_SCAN_ENABLE => {
-                ReturnParameters::LeSetScanEnable(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_CREATE_CONNECTION_CANCEL => {
-                ReturnParameters::LeCreateConnectionCancel(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_READ_WHITE_LIST_SIZE => {
-                ReturnParameters::LeReadWhiteListSize(to_status(&bytes[3..])?, bytes[4] as usize)
-            }
-            crate::opcode::LE_CLEAR_WHITE_LIST => {
-                ReturnParameters::LeClearWhiteList(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_ADD_DEVICE_TO_WHITE_LIST => {
-                ReturnParameters::LeAddDeviceToWhiteList(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_REMOVE_DEVICE_FROM_WHITE_LIST => {
-                ReturnParameters::LeRemoveDeviceFromWhiteList(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_SET_HOST_CHANNEL_CLASSIFICATION => {
-                ReturnParameters::LeSetHostChannelClassification(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_READ_CHANNEL_MAP => {
-                ReturnParameters::LeReadChannelMap(to_le_channel_map_parameters(&bytes[3..])?)
-            }
-            crate::opcode::LE_ENCRYPT => {
-                ReturnParameters::LeEncrypt(to_le_encrypted_data(&bytes[3..])?)
-            }
-            crate::opcode::LE_RAND => ReturnParameters::LeRand(to_random_number(&bytes[3..])?),
-            crate::opcode::LE_LTK_REQUEST_REPLY => {
-                ReturnParameters::LeLongTermKeyRequestReply(to_le_ltk_request_reply(&bytes[3..])?)
-            }
-            crate::opcode::LE_LTK_REQUEST_NEGATIVE_REPLY => {
+                ),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_SET_ADVERTISING_DATA => gated!(
+                "return-le-set-advertising-data",
+                ReturnParameters::LeSetAdvertisingData(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_SET_SCAN_RESPONSE_DATA => gated!(
+                "return-le-set-scan-response-data",
+                ReturnParameters::LeSetScanResponseData(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_SET_ADVERTISE_ENABLE => gated!(
+                "return-le-set-advertising-enable",
+                to_le_set_advertise_enable(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_SET_SCAN_PARAMETERS => gated!(
+                "return-le-set-scan-parameters",
+                ReturnParameters::LeSetScanParameters(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_SET_SCAN_ENABLE => gated!(
+                "return-le-set-scan-enable",
+                ReturnParameters::LeSetScanEnable(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_CREATE_CONNECTION_CANCEL => gated!(
+                "return-le-create-connection-cancel",
+                ReturnParameters::LeCreateConnectionCancel(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_READ_WHITE_LIST_SIZE => gated!(
+                "return-le-read-white-list-size",
+                ReturnParameters::LeReadWhiteListSize(to_status(&bytes[3..])?, bytes[4] as usize),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_CLEAR_WHITE_LIST => gated!(
+                "return-le-clear-white-list",
+                ReturnParameters::LeClearWhiteList(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_ADD_DEVICE_TO_WHITE_LIST => gated!(
+                "return-le-add-device-to-white-list",
+                ReturnParameters::LeAddDeviceToWhiteList(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_REMOVE_DEVICE_FROM_WHITE_LIST => gated!(
+                "return-le-remove-device-from-white-list",
+                ReturnParameters::LeRemoveDeviceFromWhiteList(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_SET_HOST_CHANNEL_CLASSIFICATION => gated!(
+                "return-le-set-host-channel-classification",
+                ReturnParameters::LeSetHostChannelClassification(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_READ_CHANNEL_MAP => gated!(
+                "return-le-read-channel-map",
+                ReturnParameters::LeReadChannelMap(to_le_channel_map_parameters(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_ENCRYPT => gated!(
+                "return-le-encrypt",
+                ReturnParameters::LeEncrypt(to_le_encrypted_data(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_RAND => gated!(
+                "return-le-rand",
+                ReturnParameters::LeRand(to_random_number(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_LTK_REQUEST_REPLY => gated!(
+                "return-le-long-term-key-request-reply",
+                ReturnParameters::LeLongTermKeyRequestReply(to_le_ltk_request_reply(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_LTK_REQUEST_NEGATIVE_REPLY => gated!(
+                "return-le-long-term-key-request-negative-reply",
                 ReturnParameters::LeLongTermKeyRequestNegativeReply(to_le_ltk_request_reply(
                     &bytes[3..],
-                )?)
-            }
-            crate::opcode::LE_READ_STATES => {
-                ReturnParameters::LeReadSupportedStates(to_le_read_states(&bytes[3..])?)
-            }
-            crate::opcode::LE_RECEIVER_TEST => {
-                ReturnParameters::LeReceiverTest(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_TRANSMITTER_TEST => {
-                ReturnParameters::LeTransmitterTest(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_TEST_END => ReturnParameters::LeTestEnd(to_le_test_end(&bytes[3..])?),
-            crate::opcode::LE_SET_DATA_LENGTH => {
-                ReturnParameters::LeSetDataLength(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_WRITE_SUGGESTED_DEFAULT_DATA_LENGTH => {
-                ReturnParameters::LeWriteSuggestedDefaultDataLength(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_SET_DEFAULT_PHY => {
-                ReturnParameters::LeSetDefaultPhy(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_SET_ADDRESS_RESOLUTION_ENABLE => {
-                ReturnParameters::LeSetAddressResolutionEnable(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_ADD_DEVICE_TO_RESOLVING_LIST => {
-                ReturnParameters::LeAddDeviceToResolvingList(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_REMOVE_DEVICE_FROM_RESOLVING_LIST => {
-                ReturnParameters::LeRemoveDeviceFromResolvingList(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_CLEAR_RESOLVING_LIST => {
-                ReturnParameters::LeClearResolvingList(to_status(&bytes[3..])?)
-            }
-            crate::opcode::LE_READ_RESOLVING_LIST_SIZE => {
-                require_len!(bytes, 5);
-                ReturnParameters::LeReadResolvingListSize(LeReadResolvingListSize {
-                    status: to_status(&bytes[3..])?,
-                    size: bytes[4],
-                })
-            }
-            crate::opcode::LE_READ_PEER_RESOLVABLE_ADDRESS => {
+                )?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_READ_STATES => gated!(
+                "return-le-read-supported-states",
+                ReturnParameters::LeReadSupportedStates(to_le_read_states(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_RECEIVER_TEST => gated!(
+                "return-le-receiver-test",
+                ReturnParameters::LeReceiverTest(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_TRANSMITTER_TEST => gated!(
+                "return-le-transmitter-test",
+                ReturnParameters::LeTransmitterTest(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_TEST_END => gated!(
+                "return-le-test-end",
+                ReturnParameters::LeTestEnd(to_le_test_end(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_SET_DATA_LENGTH => gated!(
+                "return-le-set-data-length",
+                ReturnParameters::LeSetDataLength(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_WRITE_SUGGESTED_DEFAULT_DATA_LENGTH => gated!(
+                "return-le-write-suggested-default-data-length",
+                ReturnParameters::LeWriteSuggestedDefaultDataLength(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_SET_DEFAULT_PHY => gated!(
+                "return-le-set-default-phy",
+                ReturnParameters::LeSetDefaultPhy(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_SET_ADDRESS_RESOLUTION_ENABLE => gated!(
+                "return-le-set-address-resolution-enable",
+                ReturnParameters::LeSetAddressResolutionEnable(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_ADD_DEVICE_TO_RESOLVING_LIST => gated!(
+                "return-le-add-device-to-resolving-list",
+                ReturnParameters::LeAddDeviceToResolvingList(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_REMOVE_DEVICE_FROM_RESOLVING_LIST => gated!(
+                "return-le-remove-device-from-resolving-list",
+                ReturnParameters::LeRemoveDeviceFromResolvingList(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_CLEAR_RESOLVING_LIST => gated!(
+                "return-le-clear-resolving-list",
+                ReturnParameters::LeClearResolvingList(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_READ_RESOLVING_LIST_SIZE => gated!(
+                "return-le-read-resolving-list-size",
+                {
+                    require_len!(bytes, 5);
+                    ReturnParameters::LeReadResolvingListSize(LeReadResolvingListSize {
+                        status: to_status(&bytes[3..])?,
+                        size: bytes[4],
+                    })
+                },
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_READ_PEER_RESOLVABLE_ADDRESS => gated!(
+                "return-le-read-peer-resolvable-address",
                 ReturnParameters::LeReadPeerResolvableAddress(to_le_read_resolvable_address(
                     &bytes[3..],
-                )?)
-            }
-            crate::opcode::LE_READ_LOCAL_RESOLVABLE_ADDRESS => {
+                )?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_READ_LOCAL_RESOLVABLE_ADDRESS => gated!(
+                "return-le-read-local-resolvable-address",
                 ReturnParameters::LeReadLocalResolvableAddress(to_le_read_resolvable_address(
                     &bytes[3..],
-                )?)
-            }
-            crate::opcode::LE_SET_PRIVACY_MODE => {
-                ReturnParameters::LeSetPrivacyMode(to_status(&bytes[3..])?)
-            }
+                )?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
+            crate::opcode::LE_SET_PRIVACY_MODE => gated!(
+                "return-le-set-privacy-mode",
+                ReturnParameters::LeSetPrivacyMode(to_status(&bytes[3..])?),
+                ReturnParameters::Unparsed(to_unparsed(opcode, &bytes[3..])?),
+            ),
             other => {
                 if other.ogf() != VENDOR_OGF {
                     return Err(crate::event::Error::UnknownOpcode(other));
@@ -396,6 +499,47 @@ pub enum ReturnParameters {
 
     /// Parameters returned by vendor-specific commands.
     Vendor(crate::vendor::event::response::VendorReturnParameters),
+
+    /// Return parameters of a known command whose decoder is disabled by its `return-*` cargo
+    /// feature.
+    Unparsed(UnparsedReturnParameters),
+}
+
+/// Return parameters of a command whose decoder is disabled by its `return-*` cargo feature.
+///
+/// Only the status is decoded, for the commands whose return parameters start with one.
+#[derive(Copy, Clone, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct UnparsedReturnParameters {
+    /// Opcode of the command that completed.
+    pub opcode: crate::opcode::Opcode,
+
+    /// Did the command fail, and if so, how? `None` for commands whose return parameters don't
+    /// start with a status, such as
+    /// [HAL Get PM Debug Info](crate::vendor::command::hal::HalCommands::get_pm_debug_info).
+    pub status: Option<Status>,
+}
+
+/// Return parameters that start with a status, whose decoder is disabled.
+pub(crate) fn to_unparsed(
+    opcode: crate::opcode::Opcode,
+    bytes: &[u8],
+) -> Result<UnparsedReturnParameters, crate::event::Error> {
+    require_len_at_least!(bytes, 1);
+    Ok(UnparsedReturnParameters {
+        opcode,
+        status: Some(to_status(bytes)?),
+    })
+}
+
+/// Return parameters that don't start with a status, whose decoder is disabled.
+pub(crate) fn to_unparsed_without_status(
+    opcode: crate::opcode::Opcode,
+) -> UnparsedReturnParameters {
+    UnparsedReturnParameters {
+        opcode,
+        status: None,
+    }
 }
 
 /// Return parameters for

@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "stm32wb-hci"
-version = "0.1706.1"
+version = "0.1707.0"
 authors = [
     "Daniel Gallagher <pdanielgallagher@gmail.com>",
     "Ghaith Oueslati <ghaith.oueslati@enis.tn>",
@@ -23,4 +23,408 @@ defmt = { version = "0.3", optional = true }
 tokio = { version = "1.35", features = ["rt", "rt-multi-thread", "macros"] }
 
 [features]
+default = ["all-events", "all-return-parameters"]
 defmt = ["dep:defmt"]
+
+# Each HCI event and command return parameter decoder has its own feature. A disabled event decodes
+# as `Event::Unparsed`, `Event::UnparsedLeMeta` or `VendorEvent::Unparsed`, and disabled return
+# parameters decode as `ReturnParameters::Unparsed` or `VendorReturnParameters::Unparsed`, so
+# firmware that needs only a few of them can leave out the rest of the decoding code.
+all-events = [
+    "event-att-error-response",
+    "event-att-exchange-mtu-response",
+    "event-att-execute-write-response",
+    "event-att-find-by-type-value-response",
+    "event-att-find-information-response",
+    "event-att-prepare-write-permit-request",
+    "event-att-prepare-write-response",
+    "event-att-read-blob-response",
+    "event-att-read-by-group-type-response",
+    "event-att-read-by-type-response",
+    "event-att-read-multiple-permit-request",
+    "event-att-read-multiple-response",
+    "event-att-read-permit-request",
+    "event-att-read-response",
+    "event-att-write-permit-request",
+    "event-command-complete",
+    "event-command-status",
+    "event-connection-complete",
+    "event-coprocessor-ready",
+    "event-data-buffer-overflow",
+    "event-disconnection-complete",
+    "event-encryption-change",
+    "event-encryption-key-refresh-complete",
+    "event-gap-address-not-resolved",
+    "event-gap-authorization-request",
+    "event-gap-bond-lost",
+    "event-gap-device-found",
+    "event-gap-keypress-notification",
+    "event-gap-limited-discoverable-timeout",
+    "event-gap-numeric-comparison-value",
+    "event-gap-pairing-complete",
+    "event-gap-pass-key-request",
+    "event-gap-peripheral-security-initiated",
+    "event-gap-procedure-complete",
+    "event-gatt-attribute-modified",
+    "event-gatt-discover-or-read-characteristic-by-uuid-response",
+    "event-gatt-eatt-brearer",
+    "event-gatt-indication",
+    "event-gatt-indication-ext",
+    "event-gatt-multi-notification",
+    "event-gatt-notification",
+    "event-gatt-notification-complete",
+    "event-gatt-notification-ext",
+    "event-gatt-procedure-complete",
+    "event-gatt-procedure-timeout",
+    "event-gatt-read-ext",
+    "event-gatt-server-confirmation",
+    "event-gatt-tx-pool-available",
+    "event-hal-end-of-radio-activity",
+    "event-hal-firmware-error",
+    "event-hal-scan-req-report",
+    "event-hardware-error",
+    "event-l2cap-coc-connect",
+    "event-l2cap-coc-connect-confirm",
+    "event-l2cap-coc-disconnect",
+    "event-l2cap-coc-flow-control",
+    "event-l2cap-coc-reconfig",
+    "event-l2cap-coc-reconfig-confirm",
+    "event-l2cap-coc-rx-data",
+    "event-l2cap-coc-tx-pool-available",
+    "event-l2cap-command-reject",
+    "event-l2cap-connection-update-request",
+    "event-l2cap-connection-update-response",
+    "event-l2cap-procedure-timeout",
+    "event-le-advertising-report",
+    "event-le-advertising-set-terminated",
+    "event-le-connection-complete",
+    "event-le-connection-update-complete",
+    "event-le-data-length-change-event",
+    "event-le-enhanced-connection-complete",
+    "event-le-generate-dhkey-complete",
+    "event-le-long-term-key-request",
+    "event-le-phy-update-complete",
+    "event-le-read-local-p256-public-key-complete",
+    "event-le-read-remote-used-features-complete",
+    "event-number-of-completed-packets",
+    "event-read-remote-version-information-complete",
+]
+all-return-parameters = [
+    "return-gap-add-devices-to-list",
+    "return-gap-add-devices-to-resolving-list",
+    "return-gap-adv-clear-sets",
+    "return-gap-adv-remove-set",
+    "return-gap-adv-set-adv-data",
+    "return-gap-adv-set-configuration",
+    "return-gap-adv-set-enable",
+    "return-gap-adv-set-scan-response-data",
+    "return-gap-allow-rebond",
+    "return-gap-authorization-response",
+    "return-gap-clear-security-database",
+    "return-gap-configure-white-list",
+    "return-gap-delete-ad-type",
+    "return-gap-get-bonded-devices",
+    "return-gap-get-security-level",
+    "return-gap-init",
+    "return-gap-is-device-bonded",
+    "return-gap-pass-key-response",
+    "return-gap-resolve-private-address",
+    "return-gap-set-authentication-requirement",
+    "return-gap-set-authorization-requirement",
+    "return-gap-set-broadcast-mode",
+    "return-gap-set-direct-connectable",
+    "return-gap-set-discoverable",
+    "return-gap-set-event-mask",
+    "return-gap-set-io-capability",
+    "return-gap-set-non-connectable",
+    "return-gap-set-non-discoverable",
+    "return-gap-set-undirected-connectable",
+    "return-gap-start-observation-procedure",
+    "return-gap-terminate-procedure",
+    "return-gap-update-advertising-data",
+    "return-gatt-add-characteristic",
+    "return-gatt-add-characteristic-descriptor",
+    "return-gatt-add-service",
+    "return-gatt-allow-read",
+    "return-gatt-confirm-indication",
+    "return-gatt-delete-characteristic",
+    "return-gatt-delete-included-service",
+    "return-gatt-delete-service",
+    "return-gatt-include-service",
+    "return-gatt-init",
+    "return-gatt-read-handle-value",
+    "return-gatt-read-handle-value-offset",
+    "return-gatt-set-descriptor-value",
+    "return-gatt-set-event-mask",
+    "return-gatt-set-security-permission",
+    "return-gatt-signed-write-without-response",
+    "return-gatt-update-characteristic-value",
+    "return-gatt-update-long-characteristic-value",
+    "return-gatt-write-response",
+    "return-gatt-write-without-response",
+    "return-hal-device-standby",
+    "return-hal-get-anchor-period",
+    "return-hal-get-firmware-revision",
+    "return-hal-get-link-status",
+    "return-hal-get-pm-debug-info",
+    "return-hal-get-tx-test-packet-count",
+    "return-hal-read-config-data",
+    "return-hal-read-radio-reg",
+    "return-hal-read-raw-rssi",
+    "return-hal-read-rssi",
+    "return-hal-set-tx-power-level",
+    "return-hal-start-tone",
+    "return-hal-stop-tone",
+    "return-hal-write-config-data",
+    "return-l2cap-coc-connect",
+    "return-l2cap-coc-connect-confirm",
+    "return-l2cap-coc-disconnect",
+    "return-l2cap-coc-flow-control",
+    "return-l2cap-coc-reconfig",
+    "return-l2cap-coc-reconfig-confirm",
+    "return-l2cap-coc-tx-data",
+    "return-l2cap-connection-parameter-update-response",
+    "return-le-add-device-to-resolving-list",
+    "return-le-add-device-to-white-list",
+    "return-le-clear-resolving-list",
+    "return-le-clear-white-list",
+    "return-le-create-connection-cancel",
+    "return-le-encrypt",
+    "return-le-long-term-key-request-negative-reply",
+    "return-le-long-term-key-request-reply",
+    "return-le-rand",
+    "return-le-read-advertising-channel-tx-power",
+    "return-le-read-buffer-size",
+    "return-le-read-channel-map",
+    "return-le-read-local-resolvable-address",
+    "return-le-read-local-supported-features",
+    "return-le-read-peer-resolvable-address",
+    "return-le-read-resolving-list-size",
+    "return-le-read-supported-states",
+    "return-le-read-white-list-size",
+    "return-le-receiver-test",
+    "return-le-remove-device-from-resolving-list",
+    "return-le-remove-device-from-white-list",
+    "return-le-set-address-resolution-enable",
+    "return-le-set-advertising-data",
+    "return-le-set-advertising-enable",
+    "return-le-set-advertising-parameters",
+    "return-le-set-data-length",
+    "return-le-set-default-phy",
+    "return-le-set-event-mask",
+    "return-le-set-host-channel-classification",
+    "return-le-set-privacy-mode",
+    "return-le-set-random-address",
+    "return-le-set-scan-enable",
+    "return-le-set-scan-parameters",
+    "return-le-set-scan-response-data",
+    "return-le-test-end",
+    "return-le-transmitter-test",
+    "return-le-write-suggested-default-data-length",
+    "return-read-bd-addr",
+    "return-read-local-supported-commands",
+    "return-read-local-supported-features",
+    "return-read-local-version-information",
+    "return-read-rssi",
+    "return-read-tx-power-level",
+    "return-reset",
+    "return-set-event-mask",
+]
+
+event-att-error-response = []
+event-att-exchange-mtu-response = []
+event-att-execute-write-response = []
+event-att-find-by-type-value-response = []
+event-att-find-information-response = []
+event-att-prepare-write-permit-request = []
+event-att-prepare-write-response = []
+event-att-read-blob-response = []
+event-att-read-by-group-type-response = []
+event-att-read-by-type-response = []
+event-att-read-multiple-permit-request = []
+event-att-read-multiple-response = []
+event-att-read-permit-request = []
+event-att-read-response = []
+event-att-write-permit-request = []
+event-command-complete = []
+event-command-status = []
+event-connection-complete = []
+event-coprocessor-ready = []
+event-data-buffer-overflow = []
+event-disconnection-complete = []
+event-encryption-change = []
+event-encryption-key-refresh-complete = []
+event-gap-address-not-resolved = []
+event-gap-authorization-request = []
+event-gap-bond-lost = []
+event-gap-device-found = []
+event-gap-keypress-notification = []
+event-gap-limited-discoverable-timeout = []
+event-gap-numeric-comparison-value = []
+event-gap-pairing-complete = []
+event-gap-pass-key-request = []
+event-gap-peripheral-security-initiated = []
+event-gap-procedure-complete = []
+event-gatt-attribute-modified = []
+event-gatt-discover-or-read-characteristic-by-uuid-response = []
+event-gatt-eatt-brearer = []
+event-gatt-indication = []
+event-gatt-indication-ext = []
+event-gatt-multi-notification = []
+event-gatt-notification = []
+event-gatt-notification-complete = []
+event-gatt-notification-ext = []
+event-gatt-procedure-complete = []
+event-gatt-procedure-timeout = []
+event-gatt-read-ext = []
+event-gatt-server-confirmation = []
+event-gatt-tx-pool-available = []
+event-hal-end-of-radio-activity = []
+event-hal-firmware-error = []
+event-hal-scan-req-report = []
+event-hardware-error = []
+event-l2cap-coc-connect = []
+event-l2cap-coc-connect-confirm = []
+event-l2cap-coc-disconnect = []
+event-l2cap-coc-flow-control = []
+event-l2cap-coc-reconfig = []
+event-l2cap-coc-reconfig-confirm = []
+event-l2cap-coc-rx-data = []
+event-l2cap-coc-tx-pool-available = []
+event-l2cap-command-reject = []
+event-l2cap-connection-update-request = []
+event-l2cap-connection-update-response = []
+event-l2cap-procedure-timeout = []
+event-le-advertising-report = []
+event-le-advertising-set-terminated = []
+event-le-connection-complete = []
+event-le-connection-update-complete = []
+event-le-data-length-change-event = []
+event-le-enhanced-connection-complete = []
+event-le-generate-dhkey-complete = []
+event-le-long-term-key-request = []
+event-le-phy-update-complete = []
+event-le-read-local-p256-public-key-complete = []
+event-le-read-remote-used-features-complete = []
+event-number-of-completed-packets = []
+event-read-remote-version-information-complete = []
+
+return-gap-add-devices-to-list = []
+return-gap-add-devices-to-resolving-list = []
+return-gap-adv-clear-sets = []
+return-gap-adv-remove-set = []
+return-gap-adv-set-adv-data = []
+return-gap-adv-set-configuration = []
+return-gap-adv-set-enable = []
+return-gap-adv-set-scan-response-data = []
+return-gap-allow-rebond = []
+return-gap-authorization-response = []
+return-gap-clear-security-database = []
+return-gap-configure-white-list = []
+return-gap-delete-ad-type = []
+return-gap-get-bonded-devices = []
+return-gap-get-security-level = []
+return-gap-init = []
+return-gap-is-device-bonded = []
+return-gap-pass-key-response = []
+return-gap-resolve-private-address = []
+return-gap-set-authentication-requirement = []
+return-gap-set-authorization-requirement = []
+return-gap-set-broadcast-mode = []
+return-gap-set-direct-connectable = []
+return-gap-set-discoverable = []
+return-gap-set-event-mask = []
+return-gap-set-io-capability = []
+return-gap-set-non-connectable = []
+return-gap-set-non-discoverable = []
+return-gap-set-undirected-connectable = []
+return-gap-start-observation-procedure = []
+return-gap-terminate-procedure = []
+return-gap-update-advertising-data = []
+return-gatt-add-characteristic = []
+return-gatt-add-characteristic-descriptor = []
+return-gatt-add-service = []
+return-gatt-allow-read = []
+return-gatt-confirm-indication = []
+return-gatt-delete-characteristic = []
+return-gatt-delete-included-service = []
+return-gatt-delete-service = []
+return-gatt-include-service = []
+return-gatt-init = []
+return-gatt-read-handle-value = []
+return-gatt-read-handle-value-offset = []
+return-gatt-set-descriptor-value = []
+return-gatt-set-event-mask = []
+return-gatt-set-security-permission = []
+return-gatt-signed-write-without-response = []
+return-gatt-update-characteristic-value = []
+return-gatt-update-long-characteristic-value = []
+return-gatt-write-response = []
+return-gatt-write-without-response = []
+return-hal-device-standby = []
+return-hal-get-anchor-period = []
+return-hal-get-firmware-revision = []
+return-hal-get-link-status = []
+return-hal-get-pm-debug-info = []
+return-hal-get-tx-test-packet-count = []
+return-hal-read-config-data = []
+return-hal-read-radio-reg = []
+return-hal-read-raw-rssi = []
+return-hal-read-rssi = []
+return-hal-set-tx-power-level = []
+return-hal-start-tone = []
+return-hal-stop-tone = []
+return-hal-write-config-data = []
+return-l2cap-coc-connect = []
+return-l2cap-coc-connect-confirm = []
+return-l2cap-coc-disconnect = []
+return-l2cap-coc-flow-control = []
+return-l2cap-coc-reconfig = []
+return-l2cap-coc-reconfig-confirm = []
+return-l2cap-coc-tx-data = []
+return-l2cap-connection-parameter-update-response = []
+return-le-add-device-to-resolving-list = []
+return-le-add-device-to-white-list = []
+return-le-clear-resolving-list = []
+return-le-clear-white-list = []
+return-le-create-connection-cancel = []
+return-le-encrypt = []
+return-le-long-term-key-request-negative-reply = []
+return-le-long-term-key-request-reply = []
+return-le-rand = []
+return-le-read-advertising-channel-tx-power = []
+return-le-read-buffer-size = []
+return-le-read-channel-map = []
+return-le-read-local-resolvable-address = []
+return-le-read-local-supported-features = []
+return-le-read-peer-resolvable-address = []
+return-le-read-resolving-list-size = []
+return-le-read-supported-states = []
+return-le-read-white-list-size = []
+return-le-receiver-test = []
+return-le-remove-device-from-resolving-list = []
+return-le-remove-device-from-white-list = []
+return-le-set-address-resolution-enable = []
+return-le-set-advertising-data = []
+return-le-set-advertising-enable = []
+return-le-set-advertising-parameters = []
+return-le-set-data-length = []
+return-le-set-default-phy = []
+return-le-set-event-mask = []
+return-le-set-host-channel-classification = []
+return-le-set-privacy-mode = []
+return-le-set-random-address = []
+return-le-set-scan-enable = []
+return-le-set-scan-parameters = []
+return-le-set-scan-response-data = []
+return-le-test-end = []
+return-le-transmitter-test = []
+return-le-write-suggested-default-data-length = []
+return-read-bd-addr = []
+return-read-local-supported-commands = []
+return-read-local-supported-features = []
+return-read-local-version-information = []
+return-read-rssi = []
+return-read-tx-power-level = []
+return-reset = []
+return-set-event-mask = []

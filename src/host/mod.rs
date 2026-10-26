@@ -1838,111 +1838,119 @@ bitflags::bitflags! {
 }
 
 #[cfg(feature = "defmt")]
-defmt::bitflags! {
-    /// Event flags defined for the [`set_event_mask`](HostHci::set_event_mask) command.
-    #[derive(Default)]
-    pub struct EventFlags : u64 {
-        /// Inquiry complete event
-        const INQUIRY_COMPLETE = 0x0000_0000_0000_0001;
-        /// Inquiry result event
-        const INQUIRY_RESULT = 0x0000_0000_0000_0002;
-        /// Connection complete event
-        const CONNECTION_COMPLETE = 0x0000_0000_0000_0004;
-        /// Connection request event
-        const CONNECTION_REQUEST = 0x0000_0000_0000_0008;
-        /// Disconnection complete event
-        const DISCONNECTION_COMPLETE = 0x0000_0000_0000_0010;
-        /// Authentication complete event
-        const AUTHENTICATION_COMPLETE = 0x0000_0000_0000_0020;
-        /// Remote name request complete event
-        const REMOTE_NAME_REQUEST_COMPLETE = 0x0000_0000_0000_0040;
-        /// Encryption change event
-        const ENCRYPTION_CHANGE = 0x0000_0000_0000_0080;
-        /// Change connection link key complete event
-        const CHANGE_CONNECTION_LINK_KEY_COMPLETE = 0x0000_0000_0000_0100;
-        /// Master link key complete event
-        const MASTER_LINK_KEY_COMPLETE = 0x0000_0000_0000_0200;
-        /// Read remote supported features complete event
-        const READ_REMOTE_SUPPORTED_FEATURES_COMPLETE = 0x0000_0000_0000_0400;
-        /// Read remote version information complete event
-        const READ_REMOTE_VERSION_INFORMATION_COMPLETE = 0x0000_0000_0000_0800;
-        /// Qos setup complete event
-        const QOS_SETUP_COMPLETE = 0x0000_0000_0000_1000;
-        /// Hardware error event
-        const HARDWARE_ERROR = 0x0000_0000_0000_8000;
-        /// Flush occurred event
-        const FLUSH_OCCURRED = 0x0000_0000_0001_0000;
-        /// Role change event
-        const ROLE_CHANGE = 0x0000_0000_0002_0000;
-        /// Mode change event
-        const MODE_CHANGE = 0x0000_0000_0008_0000;
-        /// Return link keys event
-        const RETURN_LINK_KEYS = 0x0000_0000_0010_0000;
-        /// Pin code request event
-        const PIN_CODE_REQUEST = 0x0000_0000_0020_0000;
-        /// Link key request event
-        const LINK_KEY_REQUEST = 0x0000_0000_0040_0000;
-        /// Link key notification event
-        const LINK_KEY_NOTIFICATION = 0x0000_0000_0080_0000;
-        /// Loopback command event
-        const LOOPBACK_COMMAND = 0x0000_0000_0100_0000;
-        /// Data buffer overflow event
-        const DATA_BUFFER_OVERFLOW = 0x0000_0000_0200_0000;
-        /// Max slots change event
-        const MAX_SLOTS_CHANGE = 0x0000_0000_0400_0000;
-        /// Read clock offset complete event
-        const READ_CLOCK_OFFSET_COMPLETE = 0x0000_0000_0800_0000;
-        /// Connection packet type changed event
-        const CONNECTION_PACKET_TYPE_CHANGED = 0x0000_0000_1000_0000;
-        /// Qos violation event
-        const QOS_VIOLATION = 0x0000_0000_2000_0000;
-        /// Page scan mode change event. Deprecated in Bluetooth spec.
-        #[deprecated]
-        const PAGE_SCAN_MODE_CHANGE = 0x0000_0000_4000_0000;
-        /// Page scan repetition mode change event
-        const PAGE_SCAN_REPETITION_MODE_CHANGE = 0x0000_0000_8000_0000;
-        /// Flow specification complete event
-        const FLOW_SPECIFICATION_COMPLETE = 0x0000_0001_0000_0000;
-        /// Inquiry result with rssi event
-        const INQUIRY_RESULT_WITH_RSSI = 0x0000_0002_0000_0000;
-        /// Read remote extended features complete event
-        const READ_REMOTE_EXTENDED_FEATURES_COMPLETE = 0x0000_0004_0000_0000;
-        /// Synchronous connection complete event
-        const SYNCHRONOUS_CONNECTION_COMPLETE = 0x0000_0800_0000_0000;
-        /// Synchronous connection changed event
-        const SYNCHRONOUS_CONNECTION_CHANGED = 0x0000_1000_0000_0000;
-        /// Sniff subrating event
-        const SNIFF_SUBRATING = 0x0000_2000_0000_0000;
-        /// Extended inquiry result event
-        const EXTENDED_INQUIRY_RESULT = 0x0000_4000_0000_0000;
-        /// Encryption key refresh complete event
-        const ENCRYPTION_KEY_REFRESH_COMPLETE = 0x0000_8000_0000_0000;
-        /// Io capability request event
-        const IO_CAPABILITY_REQUEST = 0x0001_0000_0000_0000;
-        /// Io capability request reply event
-        const IO_CAPABILITY_REQUEST_REPLY = 0x0002_0000_0000_0000;
-        /// User confirmation request event
-        const USER_CONFIRMATION_REQUEST = 0x0004_0000_0000_0000;
-        /// User passkey request event
-        const USER_PASSKEY_REQUEST = 0x0008_0000_0000_0000;
-        /// Remote oob data request event
-        const REMOTE_OOB_DATA_REQUEST = 0x0010_0000_0000_0000;
-        /// Simple pairing complete event
-        const SIMPLE_PAIRING_COMPLETE = 0x0020_0000_0000_0000;
-        /// Link supervision timeout changed event
-        const LINK_SUPERVISION_TIMEOUT_CHANGED = 0x0080_0000_0000_0000;
-        /// Enhanced flush complete event
-        const ENHANCED_FLUSH_COMPLETE = 0x0100_0000_0000_0000;
-        /// User passkey notification event
-        const USER_PASSKEY_NOTIFICATION = 0x0400_0000_0000_0000;
-        /// Keypress notification event
-        const KEYPRESS_NOTIFICATION = 0x0800_0000_0000_0000;
-        /// Remote host supported features notification event
-        const REMOTE_HOST_SUPPORTED_FEATURES_NOTIFICATION = 0x1000_0000_0000_0000;
-        /// LE meta-events
-        const LE_META_EVENT = 0x2000_0000_0000_0000;
+// defmt's generated `Format` impl names every flag, including the deprecated one. Lint attributes
+// on a macro call don't reach its expansion, so allow it on a wrapping module instead.
+#[allow(deprecated)]
+mod defmt_event_flags {
+    defmt::bitflags! {
+        /// Event flags defined for the [`set_event_mask`](super::HostHci::set_event_mask) command.
+        #[derive(Default)]
+        pub struct EventFlags : u64 {
+            /// Inquiry complete event
+            const INQUIRY_COMPLETE = 0x0000_0000_0000_0001;
+            /// Inquiry result event
+            const INQUIRY_RESULT = 0x0000_0000_0000_0002;
+            /// Connection complete event
+            const CONNECTION_COMPLETE = 0x0000_0000_0000_0004;
+            /// Connection request event
+            const CONNECTION_REQUEST = 0x0000_0000_0000_0008;
+            /// Disconnection complete event
+            const DISCONNECTION_COMPLETE = 0x0000_0000_0000_0010;
+            /// Authentication complete event
+            const AUTHENTICATION_COMPLETE = 0x0000_0000_0000_0020;
+            /// Remote name request complete event
+            const REMOTE_NAME_REQUEST_COMPLETE = 0x0000_0000_0000_0040;
+            /// Encryption change event
+            const ENCRYPTION_CHANGE = 0x0000_0000_0000_0080;
+            /// Change connection link key complete event
+            const CHANGE_CONNECTION_LINK_KEY_COMPLETE = 0x0000_0000_0000_0100;
+            /// Master link key complete event
+            const MASTER_LINK_KEY_COMPLETE = 0x0000_0000_0000_0200;
+            /// Read remote supported features complete event
+            const READ_REMOTE_SUPPORTED_FEATURES_COMPLETE = 0x0000_0000_0000_0400;
+            /// Read remote version information complete event
+            const READ_REMOTE_VERSION_INFORMATION_COMPLETE = 0x0000_0000_0000_0800;
+            /// Qos setup complete event
+            const QOS_SETUP_COMPLETE = 0x0000_0000_0000_1000;
+            /// Hardware error event
+            const HARDWARE_ERROR = 0x0000_0000_0000_8000;
+            /// Flush occurred event
+            const FLUSH_OCCURRED = 0x0000_0000_0001_0000;
+            /// Role change event
+            const ROLE_CHANGE = 0x0000_0000_0002_0000;
+            /// Mode change event
+            const MODE_CHANGE = 0x0000_0000_0008_0000;
+            /// Return link keys event
+            const RETURN_LINK_KEYS = 0x0000_0000_0010_0000;
+            /// Pin code request event
+            const PIN_CODE_REQUEST = 0x0000_0000_0020_0000;
+            /// Link key request event
+            const LINK_KEY_REQUEST = 0x0000_0000_0040_0000;
+            /// Link key notification event
+            const LINK_KEY_NOTIFICATION = 0x0000_0000_0080_0000;
+            /// Loopback command event
+            const LOOPBACK_COMMAND = 0x0000_0000_0100_0000;
+            /// Data buffer overflow event
+            const DATA_BUFFER_OVERFLOW = 0x0000_0000_0200_0000;
+            /// Max slots change event
+            const MAX_SLOTS_CHANGE = 0x0000_0000_0400_0000;
+            /// Read clock offset complete event
+            const READ_CLOCK_OFFSET_COMPLETE = 0x0000_0000_0800_0000;
+            /// Connection packet type changed event
+            const CONNECTION_PACKET_TYPE_CHANGED = 0x0000_0000_1000_0000;
+            /// Qos violation event
+            const QOS_VIOLATION = 0x0000_0000_2000_0000;
+            /// Page scan mode change event. Deprecated in Bluetooth spec.
+            #[deprecated]
+            const PAGE_SCAN_MODE_CHANGE = 0x0000_0000_4000_0000;
+            /// Page scan repetition mode change event
+            const PAGE_SCAN_REPETITION_MODE_CHANGE = 0x0000_0000_8000_0000;
+            /// Flow specification complete event
+            const FLOW_SPECIFICATION_COMPLETE = 0x0000_0001_0000_0000;
+            /// Inquiry result with rssi event
+            const INQUIRY_RESULT_WITH_RSSI = 0x0000_0002_0000_0000;
+            /// Read remote extended features complete event
+            const READ_REMOTE_EXTENDED_FEATURES_COMPLETE = 0x0000_0004_0000_0000;
+            /// Synchronous connection complete event
+            const SYNCHRONOUS_CONNECTION_COMPLETE = 0x0000_0800_0000_0000;
+            /// Synchronous connection changed event
+            const SYNCHRONOUS_CONNECTION_CHANGED = 0x0000_1000_0000_0000;
+            /// Sniff subrating event
+            const SNIFF_SUBRATING = 0x0000_2000_0000_0000;
+            /// Extended inquiry result event
+            const EXTENDED_INQUIRY_RESULT = 0x0000_4000_0000_0000;
+            /// Encryption key refresh complete event
+            const ENCRYPTION_KEY_REFRESH_COMPLETE = 0x0000_8000_0000_0000;
+            /// Io capability request event
+            const IO_CAPABILITY_REQUEST = 0x0001_0000_0000_0000;
+            /// Io capability request reply event
+            const IO_CAPABILITY_REQUEST_REPLY = 0x0002_0000_0000_0000;
+            /// User confirmation request event
+            const USER_CONFIRMATION_REQUEST = 0x0004_0000_0000_0000;
+            /// User passkey request event
+            const USER_PASSKEY_REQUEST = 0x0008_0000_0000_0000;
+            /// Remote oob data request event
+            const REMOTE_OOB_DATA_REQUEST = 0x0010_0000_0000_0000;
+            /// Simple pairing complete event
+            const SIMPLE_PAIRING_COMPLETE = 0x0020_0000_0000_0000;
+            /// Link supervision timeout changed event
+            const LINK_SUPERVISION_TIMEOUT_CHANGED = 0x0080_0000_0000_0000;
+            /// Enhanced flush complete event
+            const ENHANCED_FLUSH_COMPLETE = 0x0100_0000_0000_0000;
+            /// User passkey notification event
+            const USER_PASSKEY_NOTIFICATION = 0x0400_0000_0000_0000;
+            /// Keypress notification event
+            const KEYPRESS_NOTIFICATION = 0x0800_0000_0000_0000;
+            /// Remote host supported features notification event
+            const REMOTE_HOST_SUPPORTED_FEATURES_NOTIFICATION = 0x1000_0000_0000_0000;
+            /// LE meta-events
+            const LE_META_EVENT = 0x2000_0000_0000_0000;
+        }
     }
 }
+
+#[cfg(feature = "defmt")]
+pub use defmt_event_flags::EventFlags;
 
 /// For the [`read_tx_power_level`](HostHci::read_tx_power_level) command, the allowed values for the
 /// type of power level to read.

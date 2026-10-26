@@ -189,6 +189,10 @@ pub enum VendorReturnParameters {
     /// [GAP Adv Set Configuration](crate::vendor::command::gap::GapCommands::adv_set_configuration) command.
     GapAdvSetConfiguration(crate::Status),
 
+    /// Return parameters of a known vendor command whose decoder is disabled by its `return-*`
+    /// cargo feature.
+    Unparsed(crate::event::command::UnparsedReturnParameters),
+
     /// Parameters returned by the
     /// [GAP Adv Set Enable](crate::vendor::command::gap::GapCommands::adv_set_enable) command.
     GapAdvSetEnable(crate::Status),
@@ -303,249 +307,672 @@ impl VendorReturnParameters {
     pub(crate) fn new(bytes: &[u8]) -> Result<Self, crate::event::Error> {
         check_len_at_least(bytes, 3)?;
 
-        match crate::Opcode(LittleEndian::read_u16(&bytes[1..])) {
-            crate::vendor::opcode::HAL_GET_FIRMWARE_REVISION => {
+        let opcode = crate::Opcode(LittleEndian::read_u16(&bytes[1..]));
+        match opcode {
+            crate::vendor::opcode::HAL_GET_FIRMWARE_REVISION => gated!(
+                "return-hal-get-firmware-revision",
                 Ok(VendorReturnParameters::HalGetFirmwareRevision(
                     to_hal_firmware_revision(&bytes[3..])?,
-                ))
-            }
-            crate::vendor::opcode::HAL_WRITE_CONFIG_DATA => Ok(
-                VendorReturnParameters::HalWriteConfigData(to_status(&bytes[3..])?),
+                )),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::HAL_READ_CONFIG_DATA => Ok(
-                VendorReturnParameters::HalReadConfigData(to_hal_config_data(&bytes[3..])?),
+            crate::vendor::opcode::HAL_WRITE_CONFIG_DATA => gated!(
+                "return-hal-write-config-data",
+                Ok(
+                    VendorReturnParameters::HalWriteConfigData(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::HAL_SET_TX_POWER_LEVEL => Ok(
-                VendorReturnParameters::HalSetTxPowerLevel(to_status(&bytes[3..])?),
+            crate::vendor::opcode::HAL_READ_CONFIG_DATA => gated!(
+                "return-hal-read-config-data",
+                Ok(
+                    VendorReturnParameters::HalReadConfigData(to_hal_config_data(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::HAL_DEVICE_STANDBY => Ok(
-                VendorReturnParameters::HalDeviceStandby(to_status(&bytes[3..])?),
+            crate::vendor::opcode::HAL_SET_TX_POWER_LEVEL => gated!(
+                "return-hal-set-tx-power-level",
+                Ok(
+                    VendorReturnParameters::HalSetTxPowerLevel(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::HAL_TX_TEST_PACKET_COUNT => {
+            crate::vendor::opcode::HAL_DEVICE_STANDBY => gated!(
+                "return-hal-device-standby",
+                Ok(
+                    VendorReturnParameters::HalDeviceStandby(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
+            ),
+            crate::vendor::opcode::HAL_TX_TEST_PACKET_COUNT => gated!(
+                "return-hal-get-tx-test-packet-count",
                 Ok(VendorReturnParameters::HalGetTxTestPacketCount(
                     to_hal_tx_test_packet_count(&bytes[3..])?,
-                ))
-            }
-            crate::vendor::opcode::HAL_START_TONE => Ok(VendorReturnParameters::HalStartTone(
-                to_status(&bytes[3..])?,
-            )),
-            crate::vendor::opcode::HAL_STOP_TONE => {
-                Ok(VendorReturnParameters::HalStopTone(to_status(&bytes[3..])?))
-            }
-            crate::vendor::opcode::HAL_GET_LINK_STATUS => Ok(
-                VendorReturnParameters::HalGetLinkStatus(to_hal_link_status(&bytes[3..])?),
+                )),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::HAL_GET_ANCHOR_PERIOD => Ok(
-                VendorReturnParameters::HalGetAnchorPeriod(to_hal_anchor_period(&bytes[3..])?),
+            crate::vendor::opcode::HAL_START_TONE => gated!(
+                "return-hal-start-tone",
+                Ok(VendorReturnParameters::HalStartTone(
+                    to_status(&bytes[3..])?,
+                )),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::HAL_GET_PM_DEBUG_INFO => Ok(
-                VendorReturnParameters::HalGetPmDebugInfo(to_hal_pm_debug_info(&bytes[3..])?),
+            crate::vendor::opcode::HAL_STOP_TONE => gated!(
+                "return-hal-stop-tone",
+                Ok(VendorReturnParameters::HalStopTone(to_status(&bytes[3..])?)),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::HAL_READ_RSSI => Ok(VendorReturnParameters::HalReadRssi({
-                require_len!(&bytes[3..], 1);
-                bytes[3]
-            })),
-            crate::vendor::opcode::HAL_READ_RADIO_REG => {
+            crate::vendor::opcode::HAL_GET_LINK_STATUS => gated!(
+                "return-hal-get-link-status",
+                Ok(
+                    VendorReturnParameters::HalGetLinkStatus(to_hal_link_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
+            ),
+            crate::vendor::opcode::HAL_GET_ANCHOR_PERIOD => gated!(
+                "return-hal-get-anchor-period",
+                Ok(
+                    VendorReturnParameters::HalGetAnchorPeriod(to_hal_anchor_period(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
+            ),
+            crate::vendor::opcode::HAL_GET_PM_DEBUG_INFO => gated!(
+                "return-hal-get-pm-debug-info",
+                Ok(
+                    VendorReturnParameters::HalGetPmDebugInfo(to_hal_pm_debug_info(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed_without_status(opcode),
+                )),
+            ),
+            crate::vendor::opcode::HAL_READ_RSSI => gated!(
+                "return-hal-read-rssi",
+                Ok(VendorReturnParameters::HalReadRssi({
+                    require_len!(&bytes[3..], 1);
+                    bytes[3]
+                })),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed_without_status(opcode),
+                )),
+            ),
+            crate::vendor::opcode::HAL_READ_RADIO_REG => gated!(
+                "return-hal-read-radio-reg",
                 Ok(VendorReturnParameters::HalReadRadioReg({
                     require_len!(&bytes[3..], 1);
                     bytes[3]
-                }))
-            }
-            crate::vendor::opcode::HAL_READ_RAW_RSSI => {
+                })),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed_without_status(opcode),
+                )),
+            ),
+            crate::vendor::opcode::HAL_READ_RAW_RSSI => gated!(
+                "return-hal-read-raw-rssi",
                 Ok(VendorReturnParameters::HalReadRawRssi({
                     require_len!(&bytes[3..], 1);
                     bytes[3]
-                }))
-            }
-            crate::vendor::opcode::GAP_SET_NONDISCOVERABLE => Ok(
-                VendorReturnParameters::GapSetNonDiscoverable(to_status(&bytes[3..])?),
+                })),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed_without_status(opcode),
+                )),
             ),
-            crate::vendor::opcode::GAP_SET_DISCOVERABLE => Ok(
-                VendorReturnParameters::GapSetDiscoverable(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_SET_NONDISCOVERABLE => gated!(
+                "return-gap-set-non-discoverable",
+                Ok(
+                    VendorReturnParameters::GapSetNonDiscoverable(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_SET_DIRECT_CONNECTABLE => Ok(
-                VendorReturnParameters::GapSetDirectConnectable(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_SET_DISCOVERABLE => gated!(
+                "return-gap-set-discoverable",
+                Ok(
+                    VendorReturnParameters::GapSetDiscoverable(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_SET_IO_CAPABILITY => Ok(
-                VendorReturnParameters::GapSetIoCapability(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_SET_DIRECT_CONNECTABLE => gated!(
+                "return-gap-set-direct-connectable",
+                Ok(
+                    VendorReturnParameters::GapSetDirectConnectable(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_SET_AUTHENTICATION_REQUIREMENT => Ok(
-                VendorReturnParameters::GapSetAuthenticationRequirement(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_SET_IO_CAPABILITY => gated!(
+                "return-gap-set-io-capability",
+                Ok(
+                    VendorReturnParameters::GapSetIoCapability(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_SET_AUTHORIZATION_REQUIREMENT => Ok(
-                VendorReturnParameters::GapSetAuthorizationRequirement(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_SET_AUTHENTICATION_REQUIREMENT => gated!(
+                "return-gap-set-authentication-requirement",
+                Ok(
+                    VendorReturnParameters::GapSetAuthenticationRequirement(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_PASS_KEY_RESPONSE => Ok(
-                VendorReturnParameters::GapPassKeyResponse(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_SET_AUTHORIZATION_REQUIREMENT => gated!(
+                "return-gap-set-authorization-requirement",
+                Ok(
+                    VendorReturnParameters::GapSetAuthorizationRequirement(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_AUTHORIZATION_RESPONSE => Ok(
-                VendorReturnParameters::GapAuthorizationResponse(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_PASS_KEY_RESPONSE => gated!(
+                "return-gap-pass-key-response",
+                Ok(
+                    VendorReturnParameters::GapPassKeyResponse(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_INIT => {
-                Ok(VendorReturnParameters::GapInit(to_gap_init(&bytes[3..])?))
-            }
-            crate::vendor::opcode::GAP_SET_NONCONNECTABLE => Ok(
-                VendorReturnParameters::GapSetNonConnectable(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_AUTHORIZATION_RESPONSE => gated!(
+                "return-gap-authorization-response",
+                Ok(
+                    VendorReturnParameters::GapAuthorizationResponse(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_SET_UNDIRECTED_CONNECTABLE => Ok(
-                VendorReturnParameters::GapSetUndirectedConnectable(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_INIT => gated!(
+                "return-gap-init",
+                Ok(VendorReturnParameters::GapInit(to_gap_init(&bytes[3..])?)),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_UPDATE_ADVERTISING_DATA => Ok(
-                VendorReturnParameters::GapUpdateAdvertisingData(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_SET_NONCONNECTABLE => gated!(
+                "return-gap-set-non-connectable",
+                Ok(
+                    VendorReturnParameters::GapSetNonConnectable(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_DELETE_AD_TYPE => Ok(
-                VendorReturnParameters::GapDeleteAdType(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_SET_UNDIRECTED_CONNECTABLE => gated!(
+                "return-gap-set-undirected-connectable",
+                Ok(
+                    VendorReturnParameters::GapSetUndirectedConnectable(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_GET_SECURITY_LEVEL => Ok(
-                VendorReturnParameters::GapGetSecurityLevel(to_gap_security_level(&bytes[3..])?),
+            crate::vendor::opcode::GAP_UPDATE_ADVERTISING_DATA => gated!(
+                "return-gap-update-advertising-data",
+                Ok(
+                    VendorReturnParameters::GapUpdateAdvertisingData(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_SET_EVENT_MASK => Ok(
-                VendorReturnParameters::GapSetEventMask(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_DELETE_AD_TYPE => gated!(
+                "return-gap-delete-ad-type",
+                Ok(
+                    VendorReturnParameters::GapDeleteAdType(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_CONFIGURE_WHITE_LIST => Ok(
-                VendorReturnParameters::GapConfigureWhiteList(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_GET_SECURITY_LEVEL => gated!(
+                "return-gap-get-security-level",
+                Ok(
+                    VendorReturnParameters::GapGetSecurityLevel(to_gap_security_level(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_CLEAR_SECURITY_DATABASE => Ok(
-                VendorReturnParameters::GapClearSecurityDatabase(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_SET_EVENT_MASK => gated!(
+                "return-gap-set-event-mask",
+                Ok(
+                    VendorReturnParameters::GapSetEventMask(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_ALLOW_REBOND => Ok(VendorReturnParameters::GapAllowRebond(
-                to_status(&bytes[3..])?,
-            )),
-            crate::vendor::opcode::GAP_TERMINATE_PROCEDURE => Ok(
-                VendorReturnParameters::GapTerminateProcedure(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_CONFIGURE_WHITE_LIST => gated!(
+                "return-gap-configure-white-list",
+                Ok(
+                    VendorReturnParameters::GapConfigureWhiteList(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_RESOLVE_PRIVATE_ADDRESS => {
+            crate::vendor::opcode::GAP_CLEAR_SECURITY_DATABASE => gated!(
+                "return-gap-clear-security-database",
+                Ok(
+                    VendorReturnParameters::GapClearSecurityDatabase(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
+            ),
+            crate::vendor::opcode::GAP_ALLOW_REBOND => gated!(
+                "return-gap-allow-rebond",
+                Ok(VendorReturnParameters::GapAllowRebond(
+                    to_status(&bytes[3..])?,
+                )),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
+            ),
+            crate::vendor::opcode::GAP_TERMINATE_PROCEDURE => gated!(
+                "return-gap-terminate-procedure",
+                Ok(
+                    VendorReturnParameters::GapTerminateProcedure(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
+            ),
+            crate::vendor::opcode::GAP_RESOLVE_PRIVATE_ADDRESS => gated!(
+                "return-gap-resolve-private-address",
                 Ok(VendorReturnParameters::GapResolvePrivateAddress(
                     to_gap_resolve_private_address(&bytes[3..])?,
-                ))
-            }
-            crate::vendor::opcode::GAP_GET_BONDED_DEVICES => Ok(
-                VendorReturnParameters::GapGetBondedDevices(to_gap_bonded_devices(&bytes[3..])?),
+                )),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_SET_BROADCAST_MODE => Ok(
-                VendorReturnParameters::GapSetBroadcastMode(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_GET_BONDED_DEVICES => gated!(
+                "return-gap-get-bonded-devices",
+                Ok(
+                    VendorReturnParameters::GapGetBondedDevices(to_gap_bonded_devices(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_START_OBSERVATION_PROCEDURE => Ok(
-                VendorReturnParameters::GapStartObservationProcedure(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_SET_BROADCAST_MODE => gated!(
+                "return-gap-set-broadcast-mode",
+                Ok(
+                    VendorReturnParameters::GapSetBroadcastMode(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_IS_DEVICE_BONDED => Ok(
-                VendorReturnParameters::GapIsDeviceBonded(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_START_OBSERVATION_PROCEDURE => gated!(
+                "return-gap-start-observation-procedure",
+                Ok(
+                    VendorReturnParameters::GapStartObservationProcedure(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_ADD_DEVICES_TO_LIST => Ok(
-                VendorReturnParameters::GapAddDevicesToList(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_IS_DEVICE_BONDED => gated!(
+                "return-gap-is-device-bonded",
+                Ok(
+                    VendorReturnParameters::GapIsDeviceBonded(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_ADD_DEVICES_TO_RESOLVING_LIST => Ok(
-                VendorReturnParameters::GapAddDevicesToResolvingList(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_ADD_DEVICES_TO_LIST => gated!(
+                "return-gap-add-devices-to-list",
+                Ok(
+                    VendorReturnParameters::GapAddDevicesToList(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GATT_INIT => {
-                Ok(VendorReturnParameters::GattInit(to_status(&bytes[3..])?))
-            }
-            crate::vendor::opcode::GATT_ADD_SERVICE => Ok(VendorReturnParameters::GattAddService(
-                to_gatt_service(&bytes[3..])?,
-            )),
-            crate::vendor::opcode::GATT_INCLUDE_SERVICE => Ok(
-                VendorReturnParameters::GattIncludeService(to_gatt_service(&bytes[3..])?),
+            crate::vendor::opcode::GAP_ADD_DEVICES_TO_RESOLVING_LIST => gated!(
+                "return-gap-add-devices-to-resolving-list",
+                Ok(
+                    VendorReturnParameters::GapAddDevicesToResolvingList(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GATT_ADD_CHARACTERISTIC => Ok(
-                VendorReturnParameters::GattAddCharacteristic(to_gatt_characteristic(&bytes[3..])?),
+            crate::vendor::opcode::GATT_INIT => gated!(
+                "return-gatt-init",
+                Ok(VendorReturnParameters::GattInit(to_status(&bytes[3..])?)),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GATT_ADD_CHARACTERISTIC_DESCRIPTOR => {
+            crate::vendor::opcode::GATT_ADD_SERVICE => gated!(
+                "return-gatt-add-service",
+                Ok(VendorReturnParameters::GattAddService(
+                    to_gatt_service(&bytes[3..])?,
+                )),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
+            ),
+            crate::vendor::opcode::GATT_INCLUDE_SERVICE => gated!(
+                "return-gatt-include-service",
+                Ok(
+                    VendorReturnParameters::GattIncludeService(to_gatt_service(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
+            ),
+            crate::vendor::opcode::GATT_ADD_CHARACTERISTIC => gated!(
+                "return-gatt-add-characteristic",
+                Ok(
+                    VendorReturnParameters::GattAddCharacteristic(to_gatt_characteristic(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
+            ),
+            crate::vendor::opcode::GATT_ADD_CHARACTERISTIC_DESCRIPTOR => gated!(
+                "return-gatt-add-characteristic-descriptor",
                 Ok(VendorReturnParameters::GattAddCharacteristicDescriptor(
                     to_gatt_characteristic_descriptor(&bytes[3..])?,
-                ))
-            }
-            crate::vendor::opcode::GATT_UPDATE_CHARACTERISTIC_VALUE => Ok(
-                VendorReturnParameters::GattUpdateCharacteristicValue(to_status(&bytes[3..])?),
+                )),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GATT_DELETE_CHARACTERISTIC => Ok(
-                VendorReturnParameters::GattDeleteCharacteristic(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GATT_UPDATE_CHARACTERISTIC_VALUE => gated!(
+                "return-gatt-update-characteristic-value",
+                Ok(
+                    VendorReturnParameters::GattUpdateCharacteristicValue(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GATT_DELETE_SERVICE => Ok(
-                VendorReturnParameters::GattDeleteService(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GATT_DELETE_CHARACTERISTIC => gated!(
+                "return-gatt-delete-characteristic",
+                Ok(
+                    VendorReturnParameters::GattDeleteCharacteristic(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GATT_DELETE_INCLUDED_SERVICE => Ok(
-                VendorReturnParameters::GattDeleteIncludedService(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GATT_DELETE_SERVICE => gated!(
+                "return-gatt-delete-service",
+                Ok(
+                    VendorReturnParameters::GattDeleteService(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GATT_SET_EVENT_MASK => Ok(
-                VendorReturnParameters::GattSetEventMask(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GATT_DELETE_INCLUDED_SERVICE => gated!(
+                "return-gatt-delete-included-service",
+                Ok(
+                    VendorReturnParameters::GattDeleteIncludedService(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GATT_WRITE_WITHOUT_RESPONSE => Ok(
-                VendorReturnParameters::GattWriteWithoutResponse(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GATT_SET_EVENT_MASK => gated!(
+                "return-gatt-set-event-mask",
+                Ok(
+                    VendorReturnParameters::GattSetEventMask(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GATT_SIGNED_WRITE_WITHOUT_RESPONSE => Ok(
-                VendorReturnParameters::GattSignedWriteWithoutResponse(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GATT_WRITE_WITHOUT_RESPONSE => gated!(
+                "return-gatt-write-without-response",
+                Ok(
+                    VendorReturnParameters::GattWriteWithoutResponse(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GATT_CONFIRM_INDICATION => Ok(
-                VendorReturnParameters::GattConfirmIndication(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GATT_SIGNED_WRITE_WITHOUT_RESPONSE => gated!(
+                "return-gatt-signed-write-without-response",
+                Ok(
+                    VendorReturnParameters::GattSignedWriteWithoutResponse(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GATT_WRITE_RESPONSE => Ok(
-                VendorReturnParameters::GattWriteResponse(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GATT_CONFIRM_INDICATION => gated!(
+                "return-gatt-confirm-indication",
+                Ok(
+                    VendorReturnParameters::GattConfirmIndication(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GATT_ALLOW_READ => Ok(VendorReturnParameters::GattAllowRead(
-                to_status(&bytes[3..])?,
-            )),
-            crate::vendor::opcode::GATT_SET_SECURITY_PERMISSION => Ok(
-                VendorReturnParameters::GattSetSecurityPermission(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GATT_WRITE_RESPONSE => gated!(
+                "return-gatt-write-response",
+                Ok(
+                    VendorReturnParameters::GattWriteResponse(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GATT_SET_DESCRIPTOR_VALUE => Ok(
-                VendorReturnParameters::GattSetDescriptorValue(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GATT_ALLOW_READ => gated!(
+                "return-gatt-allow-read",
+                Ok(VendorReturnParameters::GattAllowRead(
+                    to_status(&bytes[3..])?,
+                )),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GATT_READ_HANDLE_VALUE => Ok(
-                VendorReturnParameters::GattReadHandleValue(to_gatt_handle_value(&bytes[3..])?),
+            crate::vendor::opcode::GATT_SET_SECURITY_PERMISSION => gated!(
+                "return-gatt-set-security-permission",
+                Ok(
+                    VendorReturnParameters::GattSetSecurityPermission(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GATT_READ_HANDLE_VALUE_OFFSET => {
+            crate::vendor::opcode::GATT_SET_DESCRIPTOR_VALUE => gated!(
+                "return-gatt-set-descriptor-value",
+                Ok(
+                    VendorReturnParameters::GattSetDescriptorValue(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
+            ),
+            crate::vendor::opcode::GATT_READ_HANDLE_VALUE => gated!(
+                "return-gatt-read-handle-value",
+                Ok(
+                    VendorReturnParameters::GattReadHandleValue(to_gatt_handle_value(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
+            ),
+            crate::vendor::opcode::GATT_READ_HANDLE_VALUE_OFFSET => gated!(
+                "return-gatt-read-handle-value-offset",
                 Ok(VendorReturnParameters::GattReadHandleValueOffset(
                     to_gatt_handle_value(&bytes[3..])?,
-                ))
-            }
-            crate::vendor::opcode::GATT_UPDATE_LONG_CHARACTERISTIC_VALUE => Ok(
-                VendorReturnParameters::GattUpdateLongCharacteristicValue(to_status(&bytes[3..])?),
+                )),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::L2CAP_CONN_PARAM_UPDATE_RESP => Ok(
-                VendorReturnParameters::L2CapConnectionParameterUpdateResponse(to_status(
-                    &bytes[3..],
-                )?),
+            crate::vendor::opcode::GATT_UPDATE_LONG_CHARACTERISTIC_VALUE => gated!(
+                "return-gatt-update-long-characteristic-value",
+                Ok(
+                    VendorReturnParameters::GattUpdateLongCharacteristicValue(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::L2CAP_COC_CONNECT => Ok(
-                VendorReturnParameters::L2CapCocConnect(to_status(&bytes[3..])?),
+            crate::vendor::opcode::L2CAP_CONN_PARAM_UPDATE_RESP => gated!(
+                "return-l2cap-connection-parameter-update-response",
+                Ok(
+                    VendorReturnParameters::L2CapConnectionParameterUpdateResponse(to_status(
+                        &bytes[3..],
+                    )?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::L2CAP_COC_CONNECT_CONFIRM => {
+            crate::vendor::opcode::L2CAP_COC_CONNECT => gated!(
+                "return-l2cap-coc-connect",
+                Ok(
+                    VendorReturnParameters::L2CapCocConnect(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
+            ),
+            crate::vendor::opcode::L2CAP_COC_CONNECT_CONFIRM => gated!(
+                "return-l2cap-coc-connect-confirm",
                 Ok(VendorReturnParameters::L2CapCocConnectConfirm(
                     to_coc_connect_confirm(&bytes[3..])?,
-                ))
-            }
-            crate::vendor::opcode::L2CAP_COC_RECONFIG => Ok(
-                VendorReturnParameters::L2CapCocReconfig(to_status(&bytes[3..])?),
+                )),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::L2CAP_COC_RECONFIG_CONFIRM => Ok(
-                VendorReturnParameters::L2CapCocReconfigConfirm(to_status(&bytes[3..])?),
+            crate::vendor::opcode::L2CAP_COC_RECONFIG => gated!(
+                "return-l2cap-coc-reconfig",
+                Ok(
+                    VendorReturnParameters::L2CapCocReconfig(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::L2CAP_COC_FLOW_CONTROL => Ok(
-                VendorReturnParameters::L2CapCocFlowControl(to_status(&bytes[3..])?),
+            crate::vendor::opcode::L2CAP_COC_RECONFIG_CONFIRM => gated!(
+                "return-l2cap-coc-reconfig-confirm",
+                Ok(
+                    VendorReturnParameters::L2CapCocReconfigConfirm(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::L2CAP_COC_TX_DATA => Ok(VendorReturnParameters::L2CapCocTxData(
-                to_status(&bytes[3..])?,
-            )),
-            crate::vendor::opcode::L2CAP_COC_DISCONNECT => Ok(
-                VendorReturnParameters::L2CapCocDisconnect(to_status(&bytes[3..])?),
+            crate::vendor::opcode::L2CAP_COC_FLOW_CONTROL => gated!(
+                "return-l2cap-coc-flow-control",
+                Ok(
+                    VendorReturnParameters::L2CapCocFlowControl(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_ADV_SET_CONFIGURATION => Ok(
-                VendorReturnParameters::GapAdvSetConfiguration(to_status(&bytes[3..])?),
+            crate::vendor::opcode::L2CAP_COC_TX_DATA => gated!(
+                "return-l2cap-coc-tx-data",
+                Ok(VendorReturnParameters::L2CapCocTxData(
+                    to_status(&bytes[3..])?,
+                )),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_ADV_SET_ENABLE => Ok(
-                VendorReturnParameters::GapAdvSetEnable(to_status(&bytes[3..])?),
+            crate::vendor::opcode::L2CAP_COC_DISCONNECT => gated!(
+                "return-l2cap-coc-disconnect",
+                Ok(
+                    VendorReturnParameters::L2CapCocDisconnect(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_ADV_SET_ADV_DATA => Ok(
-                VendorReturnParameters::GapAdvSetAdvData(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_ADV_SET_CONFIGURATION => gated!(
+                "return-gap-adv-set-configuration",
+                Ok(
+                    VendorReturnParameters::GapAdvSetConfiguration(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_ADV_SET_SCAN_RESPONSE_DATA => Ok(
-                VendorReturnParameters::GapAdvSetScanResponseData(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_ADV_SET_ENABLE => gated!(
+                "return-gap-adv-set-enable",
+                Ok(
+                    VendorReturnParameters::GapAdvSetEnable(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_ADV_REMOVE_SET => Ok(
-                VendorReturnParameters::GapAdvRemoveSet(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_ADV_SET_ADV_DATA => gated!(
+                "return-gap-adv-set-adv-data",
+                Ok(
+                    VendorReturnParameters::GapAdvSetAdvData(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
-            crate::vendor::opcode::GAP_ADV_CLEAR_SETS => Ok(
-                VendorReturnParameters::GapAdvClearSets(to_status(&bytes[3..])?),
+            crate::vendor::opcode::GAP_ADV_SET_SCAN_RESPONSE_DATA => gated!(
+                "return-gap-adv-set-scan-response-data",
+                Ok(
+                    VendorReturnParameters::GapAdvSetScanResponseData(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
+            ),
+            crate::vendor::opcode::GAP_ADV_REMOVE_SET => gated!(
+                "return-gap-adv-remove-set",
+                Ok(
+                    VendorReturnParameters::GapAdvRemoveSet(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
+            ),
+            crate::vendor::opcode::GAP_ADV_CLEAR_SETS => gated!(
+                "return-gap-adv-clear-sets",
+                Ok(
+                    VendorReturnParameters::GapAdvClearSets(to_status(&bytes[3..])?),
+                ),
+                Ok(VendorReturnParameters::Unparsed(
+                    crate::event::command::to_unparsed(opcode, &bytes[3..])?,
+                )),
             ),
             other => Err(crate::event::Error::UnknownOpcode(other)),
         }
