@@ -185,6 +185,8 @@ macro_rules! unwrap {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct NoneError;
 
+// Only used by `unwrap!`, which nothing in the crate currently calls.
+#[allow(dead_code)]
 pub trait Try {
     type Ok;
     type Error;
