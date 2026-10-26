@@ -48,4 +48,7 @@ target = "thumbv7em-none-eabihf"
 DEFMT_LOG = "trace"
 
 [alias]
-localtest = "test --target=x86_64-unknown-linux-gnu --no-default-features --features all-events,all-return-parameters"
+localtest = "test --target=x86_64-unknown-linux-gnu"
+# Validating the gated parsing logic must be done separately, and will break the other tests, which do not have the
+# necessary gating logic to change expectations based on Cargo build features. So use a dedicated test command for that.
+localtest_unparsed = "test --target=x86_64-unknown-linux-gnu --no-default-features --features=event-command-complete --test unparsed"
