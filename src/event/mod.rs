@@ -28,6 +28,22 @@ macro_rules! require_len_at_least {
     };
 }
 
+/// Decodes with `$decoded` if cargo feature `$feature` is enabled, otherwise evaluates
+/// `$unparsed`.
+///
+/// Every event and return parameter decoder sits behind one of these features so that firmware can
+/// leave out the decoders it never uses. The check is a constant, so the compiler drops the
+/// decoders of disabled features.
+macro_rules! gated {
+    ($feature:literal, $decoded:expr, $unparsed:expr $(,)?) => {
+        if cfg!(feature = $feature) {
+            $decoded
+        } else {
+            $unparsed
+        }
+    };
+}
+
 pub mod command;
 
 use crate::types::{ConnectionIntervalError, FixedConnectionInterval};
@@ -124,6 +140,14 @@ pub enum Event {
     // TODO: le_channel_selection_algorithm
     /// Vendor-specific events (opcode 0xFF)
     Vendor(VendorEvent),
+
+    /// A known event whose decoder is disabled by its `event-*` cargo feature. Contains the event
+    /// code.
+    Unparsed(u8),
+
+    /// A known LE meta event whose decoder is disabled by its `event-*` cargo feature. Contains the
+    /// LE subevent code.
+    UnparsedLeMeta(u8),
 }
 
 /// Errors that may occur when deserializing an event. Must be specialized by the vendor crate to
@@ -271,26 +295,66 @@ impl Event {
         let payload = &packet.0[PACKET_HEADER_LENGTH..packet.full_length()];
 
         match event_type {
-            0x03 => Ok(Event::ConnectionComplete(to_connection_complete(payload)?)),
-            0x05 => Ok(Event::DisconnectionComplete(to_disconnection_complete(
-                payload,
-            )?)),
-            0x08 => Ok(Event::EncryptionChange(to_encryption_change(payload)?)),
-            0x0C => Ok(Event::ReadRemoteVersionInformationComplete(
-                to_remote_version_info(payload)?,
-            )),
-            0x0E => Ok(Event::CommandComplete(command::CommandComplete::new(
-                payload,
-            )?)),
-            0x0F => Ok(Event::CommandStatus(to_command_status(payload)?)),
-            0x10 => Ok(Event::HardwareError(to_hardware_error(payload)?)),
-            0x13 => Ok(Event::NumberOfCompletedPackets(
-                to_number_of_completed_packets(payload)?,
-            )),
-            0x1A => Ok(Event::DataBufferOverflow(to_data_buffer_overflow(payload)?)),
-            0x30 => Ok(Event::EncryptionKeyRefreshComplete(
-                to_encryption_key_refresh_complete(payload)?,
-            )),
+            0x03 => gated!(
+                "event-connection-complete",
+                Ok(Event::ConnectionComplete(to_connection_complete(payload)?)),
+                Ok(Event::Unparsed(event_type)),
+            ),
+            0x05 => gated!(
+                "event-disconnection-complete",
+                Ok(Event::DisconnectionComplete(to_disconnection_complete(
+                    payload,
+                )?)),
+                Ok(Event::Unparsed(event_type)),
+            ),
+            0x08 => gated!(
+                "event-encryption-change",
+                Ok(Event::EncryptionChange(to_encryption_change(payload)?)),
+                Ok(Event::Unparsed(event_type)),
+            ),
+            0x0C => gated!(
+                "event-read-remote-version-information-complete",
+                Ok(Event::ReadRemoteVersionInformationComplete(
+                    to_remote_version_info(payload)?,
+                )),
+                Ok(Event::Unparsed(event_type)),
+            ),
+            0x0E => gated!(
+                "event-command-complete",
+                Ok(Event::CommandComplete(command::CommandComplete::new(
+                    payload,
+                )?)),
+                Ok(Event::Unparsed(event_type)),
+            ),
+            0x0F => gated!(
+                "event-command-status",
+                Ok(Event::CommandStatus(to_command_status(payload)?)),
+                Ok(Event::Unparsed(event_type)),
+            ),
+            0x10 => gated!(
+                "event-hardware-error",
+                Ok(Event::HardwareError(to_hardware_error(payload)?)),
+                Ok(Event::Unparsed(event_type)),
+            ),
+            0x13 => gated!(
+                "event-number-of-completed-packets",
+                Ok(Event::NumberOfCompletedPackets(
+                    to_number_of_completed_packets(payload)?,
+                )),
+                Ok(Event::Unparsed(event_type)),
+            ),
+            0x1A => gated!(
+                "event-data-buffer-overflow",
+                Ok(Event::DataBufferOverflow(to_data_buffer_overflow(payload)?)),
+                Ok(Event::Unparsed(event_type)),
+            ),
+            0x30 => gated!(
+                "event-encryption-key-refresh-complete",
+                Ok(Event::EncryptionKeyRefreshComplete(
+                    to_encryption_key_refresh_complete(payload)?,
+                )),
+                Ok(Event::Unparsed(event_type)),
+            ),
             0x3E => to_le_meta_event(payload),
             0xFF => Ok(Event::Vendor(VendorEvent::new(payload)?)),
             _ => Err(Error::UnknownEvent(event_type)),
@@ -301,38 +365,81 @@ impl Event {
 fn to_le_meta_event(payload: &[u8]) -> Result<Event, Error> {
     require_len_at_least!(payload, 1);
     match payload[0] {
-        0x01 => Ok(Event::LeConnectionComplete(to_le_connection_complete(
-            payload,
-        )?)),
-        0x02 => Ok(Event::LeAdvertisingReport(to_le_advertising_report(
-            payload,
-        )?)),
-        0x03 => Ok(Event::LeConnectionUpdateComplete(
-            to_le_connection_update_complete(payload)?,
-        )),
-        0x04 => Ok(Event::LeReadRemoteUsedFeaturesComplete(
-            to_le_read_remote_used_features_complete(payload)?,
-        )),
-        0x05 => Ok(Event::LeLongTermKeyRequest(to_le_ltk_request(payload)?)),
-        0x07 => Ok(Event::LeDataLengthChangeEvent(
-            to_le_data_length_change_event(payload)?,
-        )),
-        0x08 => Ok(Event::LeReadLocalP256PublicKeyComplete(
-            to_le_read_local_p256_public_key(payload)?,
-        )),
-        0x09 => Ok(Event::LeGenerateDHKeyComplete(
-            to_le_generate_dhkey_complete(payload)?,
-        )),
-        0x0A => Ok(Event::LeEnhancedConnectionComplete(
-            to_le_enhanced_connection_complete(payload)?,
-        )),
-        0x0C => Ok(Event::LePhyUpdateComplete(to_le_phy_update_complete(
-            payload,
-        )?)),
-        0x12 => Ok(Event::LeAdvertisingSetTerminated(
-            to_le_advertising_set_terminated(payload)?,
-        )),
-
+        0x01 => gated!(
+            "event-le-connection-complete",
+            Ok(Event::LeConnectionComplete(to_le_connection_complete(
+                payload,
+            )?)),
+            Ok(Event::UnparsedLeMeta(payload[0])),
+        ),
+        0x02 => gated!(
+            "event-le-advertising-report",
+            Ok(Event::LeAdvertisingReport(to_le_advertising_report(
+                payload,
+            )?)),
+            Ok(Event::UnparsedLeMeta(payload[0])),
+        ),
+        0x03 => gated!(
+            "event-le-connection-update-complete",
+            Ok(Event::LeConnectionUpdateComplete(
+                to_le_connection_update_complete(payload)?,
+            )),
+            Ok(Event::UnparsedLeMeta(payload[0])),
+        ),
+        0x04 => gated!(
+            "event-le-read-remote-used-features-complete",
+            Ok(Event::LeReadRemoteUsedFeaturesComplete(
+                to_le_read_remote_used_features_complete(payload)?,
+            )),
+            Ok(Event::UnparsedLeMeta(payload[0])),
+        ),
+        0x05 => gated!(
+            "event-le-long-term-key-request",
+            Ok(Event::LeLongTermKeyRequest(to_le_ltk_request(payload)?)),
+            Ok(Event::UnparsedLeMeta(payload[0])),
+        ),
+        0x07 => gated!(
+            "event-le-data-length-change-event",
+            Ok(Event::LeDataLengthChangeEvent(
+                to_le_data_length_change_event(payload)?,
+            )),
+            Ok(Event::UnparsedLeMeta(payload[0])),
+        ),
+        0x08 => gated!(
+            "event-le-read-local-p256-public-key-complete",
+            Ok(Event::LeReadLocalP256PublicKeyComplete(
+                to_le_read_local_p256_public_key(payload)?,
+            )),
+            Ok(Event::UnparsedLeMeta(payload[0])),
+        ),
+        0x09 => gated!(
+            "event-le-generate-dhkey-complete",
+            Ok(Event::LeGenerateDHKeyComplete(
+                to_le_generate_dhkey_complete(payload)?,
+            )),
+            Ok(Event::UnparsedLeMeta(payload[0])),
+        ),
+        0x0A => gated!(
+            "event-le-enhanced-connection-complete",
+            Ok(Event::LeEnhancedConnectionComplete(
+                to_le_enhanced_connection_complete(payload)?,
+            )),
+            Ok(Event::UnparsedLeMeta(payload[0])),
+        ),
+        0x0C => gated!(
+            "event-le-phy-update-complete",
+            Ok(Event::LePhyUpdateComplete(to_le_phy_update_complete(
+                payload,
+            )?)),
+            Ok(Event::UnparsedLeMeta(payload[0])),
+        ),
+        0x12 => gated!(
+            "event-le-advertising-set-terminated",
+            Ok(Event::LeAdvertisingSetTerminated(
+                to_le_advertising_set_terminated(payload)?,
+            )),
+            Ok(Event::UnparsedLeMeta(payload[0])),
+        ),
         _ => Err(Error::UnknownEvent(payload[0])),
     }
 }

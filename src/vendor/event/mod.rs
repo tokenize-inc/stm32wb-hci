@@ -335,6 +335,10 @@ pub enum VendorEvent {
     /// default value.
     GattNotificationExt(AttributeValueExt),
 
+    /// A known vendor event whose decoder is disabled by its `event-*` cargo feature. Contains the
+    /// vendor event code.
+    Unparsed(u16),
+
     /// This event is generated when teh device completes a radio activity and provide information when
     /// a new radio activity will be performed.
     ///
@@ -696,141 +700,363 @@ impl VendorEvent {
         let event_code = LittleEndian::read_u16(&buffer[0..=1]);
 
         match event_code {
-            // SHCI "C2 Ready" event
-            0x9200 => Ok(VendorEvent::CoprocessorReady(to_coprocessor_ready(buffer)?)),
-
-            0x0004 => Ok(VendorEvent::HalEndOfRadioActivity(
-                to_hal_end_of_radio_activity(buffer)?,
-            )),
-            0x0005 => Ok(VendorEvent::HalScanReqReport(to_hal_scan_req_report(
-                buffer,
-            )?)),
-            0x0006 => Ok(VendorEvent::HalFirmwareError(to_hal_firmware_error(
-                buffer,
-            )?)),
-            0x0400 => Ok(VendorEvent::GapLimitedDiscoverableTimeout),
-            0x0401 => Ok(VendorEvent::GapPairingComplete(to_gap_pairing_complete(
-                buffer,
-            )?)),
-            0x0402 => Ok(VendorEvent::GapPassKeyRequest(to_conn_handle(buffer)?)),
-            0x0403 => Ok(VendorEvent::GapAuthorizationRequest(to_conn_handle(
-                buffer,
-            )?)),
-            0x0404 => Ok(VendorEvent::GapPeripheralSecurityInitiated),
-            0x0405 => Ok(VendorEvent::GapBondLost),
-            0x0406 => Ok(VendorEvent::GapDeviceFound(to_gap_device_found(buffer)?)),
-            0x0407 => Ok(VendorEvent::GapProcedureComplete(
-                to_gap_procedure_complete(buffer)?,
-            )),
-            0x0408 => Ok(VendorEvent::GapAddressNotResolved(to_conn_handle(buffer)?)),
-            0x0409 => Ok(VendorEvent::GapNumericComparisonValue(
-                to_numeric_comparison_value(buffer)?,
-            )),
-            0x040A => Ok(VendorEvent::GapKeypressNotification(
-                to_keypress_notification(buffer)?,
-            )),
-            0x0800 => Ok(VendorEvent::L2CapConnectionUpdateResponse(
-                to_l2cap_connection_update_response(buffer)?,
-            )),
-            0x0801 => Ok(VendorEvent::L2CapProcedureTimeout(
-                to_l2cap_procedure_timeout(buffer)?,
-            )),
-            0x0802 => Ok(VendorEvent::L2CapConnectionUpdateRequest(
-                to_l2cap_connection_update_request(buffer)?,
-            )),
-            0x080A => Ok(VendorEvent::L2CapCommandReject(to_l2cap_command_reject(
-                buffer,
-            )?)),
-            0x0810 => Ok(VendorEvent::L2CapCocConnect(to_l2cap_coc_connect(buffer)?)),
-            0x0811 => Ok(VendorEvent::L2CapCocConnectConfirm(
-                to_l2cap_coc_connect_confirm(buffer)?,
-            )),
-            0x0812 => Ok(VendorEvent::L2CapCocReconfig(to_l2cap_coc_reconfig(
-                buffer,
-            )?)),
-            0x0813 => Ok(VendorEvent::L2CapCocReconfigConfirm(
-                to_l2cap_coc_reconfig_confirm(buffer)?,
-            )),
-            0x0814 => Ok(VendorEvent::L2CapCocDisconnect(buffer[0])),
-            0x0815 => Ok(VendorEvent::L2CapCocFlowControl(to_l2cap_coc_flow_control(
-                buffer,
-            )?)),
-            0x0816 => Ok(VendorEvent::L2CapCocRxData(to_l2cap_coc_rx_data(buffer)?)),
-            0x0817 => Ok(VendorEvent::L2CapCocTxPoolAvailable),
-            0x0C01 => Ok(VendorEvent::GattAttributeModified(
-                to_gatt_attribute_modified(buffer)?,
-            )),
-            0x0C02 => Ok(VendorEvent::GattProcedureTimeout(to_conn_handle(buffer)?)),
-            0x0C03 => Ok(VendorEvent::AttExchangeMtuResponse(
-                to_att_exchange_mtu_resp(buffer)?,
-            )),
-            0x0C04 => Ok(VendorEvent::AttFindInformationResponse(
-                to_att_find_information_response(buffer)?,
-            )),
-            0x0C05 => Ok(VendorEvent::AttFindByTypeValueResponse(
-                to_att_find_by_value_type_response(buffer)?,
-            )),
-            0x0C06 => Ok(VendorEvent::AttReadByTypeResponse(
-                to_att_read_by_type_response(buffer)?,
-            )),
-            0x0C07 => Ok(VendorEvent::AttReadResponse(to_att_read_response(buffer)?)),
-            0x0C08 => Ok(VendorEvent::AttReadBlobResponse(to_att_read_response(
-                buffer,
-            )?)),
-            0x0C09 => Ok(VendorEvent::AttReadMultipleResponse(to_att_read_response(
-                buffer,
-            )?)),
-            0x0C0A => Ok(VendorEvent::AttReadByGroupTypeResponse(
-                to_att_read_by_group_type_response(buffer)?,
-            )),
-            0x0C0C => Ok(VendorEvent::AttPrepareWriteResponse(
-                to_att_prepare_write_response(buffer)?,
-            )),
-            0x0C0D => Ok(VendorEvent::AttExecuteWriteResponse(to_conn_handle(
-                buffer,
-            )?)),
-            0x0C0E => Ok(VendorEvent::GattIndication(to_attribute_value(buffer)?)),
-            0x0C0F => Ok(VendorEvent::GattNotification(to_attribute_value(buffer)?)),
-            0x0C10 => Ok(VendorEvent::GattProcedureComplete(
-                to_gatt_procedure_complete(buffer)?,
-            )),
-            0x0C11 => Ok(VendorEvent::AttErrorResponse(to_att_error_response(
-                buffer,
-            )?)),
-            0x0C12 => Ok(VendorEvent::GattDiscoverOrReadCharacteristicByUuidResponse(
-                to_attribute_value(buffer)?,
-            )),
-            0x0C13 => Ok(VendorEvent::AttWritePermitRequest(to_write_permit_request(
-                buffer,
-            )?)),
-            0x0C14 => Ok(VendorEvent::AttReadPermitRequest(
-                to_att_read_permit_request(buffer)?,
-            )),
-            0x0C15 => Ok(VendorEvent::AttReadMultiplePermitRequest(
-                to_att_read_multiple_permit_request(buffer)?,
-            )),
-            0x0C16 => Ok(VendorEvent::GattTxPoolAvailable(to_gatt_tx_pool_available(
-                buffer,
-            )?)),
-            0x0C17 => Ok(VendorEvent::GattServerConfirmation(to_conn_handle(buffer)?)),
-            0x0C18 => Ok(VendorEvent::AttPrepareWritePermitRequest(
-                to_att_prepare_write_permit_request(buffer)?,
-            )),
-            0x0C19 => Ok(VendorEvent::GattEattBrearer(to_gatt_eatt_bearer(buffer)?)),
-            0x0C1A => Ok(VendorEvent::GattMultiNotification(
-                to_gatt_multi_notification(buffer)?,
-            )),
-            0x0C1B => Ok(VendorEvent::GattNotificationComplete({
-                require_len!(buffer, 4);
-                AttributeHandle(LittleEndian::read_u16(&buffer[2..]))
-            })),
-            0x0C1D => Ok(VendorEvent::GattReadExt(to_gatt_read_ext(buffer)?)),
-            0x0C1E => Ok(VendorEvent::GattIndicationExt(to_attribute_value_ext(
-                buffer,
-            )?)),
-            0x0C1F => Ok(VendorEvent::GattNotificationExt(to_attribute_value_ext(
-                buffer,
-            )?)),
+            0x9200 => gated!(
+                "event-coprocessor-ready",
+                Ok(VendorEvent::CoprocessorReady(to_coprocessor_ready(buffer)?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0004 => gated!(
+                "event-hal-end-of-radio-activity",
+                Ok(VendorEvent::HalEndOfRadioActivity(
+                    to_hal_end_of_radio_activity(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0005 => gated!(
+                "event-hal-scan-req-report",
+                Ok(VendorEvent::HalScanReqReport(to_hal_scan_req_report(
+                    buffer,
+                )?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0006 => gated!(
+                "event-hal-firmware-error",
+                Ok(VendorEvent::HalFirmwareError(to_hal_firmware_error(
+                    buffer,
+                )?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0400 => gated!(
+                "event-gap-limited-discoverable-timeout",
+                Ok(VendorEvent::GapLimitedDiscoverableTimeout),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0401 => gated!(
+                "event-gap-pairing-complete",
+                Ok(VendorEvent::GapPairingComplete(to_gap_pairing_complete(
+                    buffer,
+                )?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0402 => gated!(
+                "event-gap-pass-key-request",
+                Ok(VendorEvent::GapPassKeyRequest(to_conn_handle(buffer)?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0403 => gated!(
+                "event-gap-authorization-request",
+                Ok(VendorEvent::GapAuthorizationRequest(to_conn_handle(
+                    buffer,
+                )?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0404 => gated!(
+                "event-gap-peripheral-security-initiated",
+                Ok(VendorEvent::GapPeripheralSecurityInitiated),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0405 => gated!(
+                "event-gap-bond-lost",
+                Ok(VendorEvent::GapBondLost),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0406 => gated!(
+                "event-gap-device-found",
+                Ok(VendorEvent::GapDeviceFound(to_gap_device_found(buffer)?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0407 => gated!(
+                "event-gap-procedure-complete",
+                Ok(VendorEvent::GapProcedureComplete(
+                    to_gap_procedure_complete(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0408 => gated!(
+                "event-gap-address-not-resolved",
+                Ok(VendorEvent::GapAddressNotResolved(to_conn_handle(buffer)?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0409 => gated!(
+                "event-gap-numeric-comparison-value",
+                Ok(VendorEvent::GapNumericComparisonValue(
+                    to_numeric_comparison_value(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x040A => gated!(
+                "event-gap-keypress-notification",
+                Ok(VendorEvent::GapKeypressNotification(
+                    to_keypress_notification(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0800 => gated!(
+                "event-l2cap-connection-update-response",
+                Ok(VendorEvent::L2CapConnectionUpdateResponse(
+                    to_l2cap_connection_update_response(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0801 => gated!(
+                "event-l2cap-procedure-timeout",
+                Ok(VendorEvent::L2CapProcedureTimeout(
+                    to_l2cap_procedure_timeout(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0802 => gated!(
+                "event-l2cap-connection-update-request",
+                Ok(VendorEvent::L2CapConnectionUpdateRequest(
+                    to_l2cap_connection_update_request(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x080A => gated!(
+                "event-l2cap-command-reject",
+                Ok(VendorEvent::L2CapCommandReject(to_l2cap_command_reject(
+                    buffer,
+                )?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0810 => gated!(
+                "event-l2cap-coc-connect",
+                Ok(VendorEvent::L2CapCocConnect(to_l2cap_coc_connect(buffer)?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0811 => gated!(
+                "event-l2cap-coc-connect-confirm",
+                Ok(VendorEvent::L2CapCocConnectConfirm(
+                    to_l2cap_coc_connect_confirm(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0812 => gated!(
+                "event-l2cap-coc-reconfig",
+                Ok(VendorEvent::L2CapCocReconfig(to_l2cap_coc_reconfig(
+                    buffer,
+                )?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0813 => gated!(
+                "event-l2cap-coc-reconfig-confirm",
+                Ok(VendorEvent::L2CapCocReconfigConfirm(
+                    to_l2cap_coc_reconfig_confirm(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0814 => gated!(
+                "event-l2cap-coc-disconnect",
+                Ok(VendorEvent::L2CapCocDisconnect(buffer[0])),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0815 => gated!(
+                "event-l2cap-coc-flow-control",
+                Ok(VendorEvent::L2CapCocFlowControl(to_l2cap_coc_flow_control(
+                    buffer,
+                )?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0816 => gated!(
+                "event-l2cap-coc-rx-data",
+                Ok(VendorEvent::L2CapCocRxData(to_l2cap_coc_rx_data(buffer)?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0817 => gated!(
+                "event-l2cap-coc-tx-pool-available",
+                Ok(VendorEvent::L2CapCocTxPoolAvailable),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C01 => gated!(
+                "event-gatt-attribute-modified",
+                Ok(VendorEvent::GattAttributeModified(
+                    to_gatt_attribute_modified(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C02 => gated!(
+                "event-gatt-procedure-timeout",
+                Ok(VendorEvent::GattProcedureTimeout(to_conn_handle(buffer)?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C03 => gated!(
+                "event-att-exchange-mtu-response",
+                Ok(VendorEvent::AttExchangeMtuResponse(
+                    to_att_exchange_mtu_resp(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C04 => gated!(
+                "event-att-find-information-response",
+                Ok(VendorEvent::AttFindInformationResponse(
+                    to_att_find_information_response(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C05 => gated!(
+                "event-att-find-by-type-value-response",
+                Ok(VendorEvent::AttFindByTypeValueResponse(
+                    to_att_find_by_value_type_response(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C06 => gated!(
+                "event-att-read-by-type-response",
+                Ok(VendorEvent::AttReadByTypeResponse(
+                    to_att_read_by_type_response(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C07 => gated!(
+                "event-att-read-response",
+                Ok(VendorEvent::AttReadResponse(to_att_read_response(buffer)?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C08 => gated!(
+                "event-att-read-blob-response",
+                Ok(VendorEvent::AttReadBlobResponse(to_att_read_response(
+                    buffer,
+                )?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C09 => gated!(
+                "event-att-read-multiple-response",
+                Ok(VendorEvent::AttReadMultipleResponse(to_att_read_response(
+                    buffer,
+                )?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C0A => gated!(
+                "event-att-read-by-group-type-response",
+                Ok(VendorEvent::AttReadByGroupTypeResponse(
+                    to_att_read_by_group_type_response(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C0C => gated!(
+                "event-att-prepare-write-response",
+                Ok(VendorEvent::AttPrepareWriteResponse(
+                    to_att_prepare_write_response(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C0D => gated!(
+                "event-att-execute-write-response",
+                Ok(VendorEvent::AttExecuteWriteResponse(to_conn_handle(
+                    buffer,
+                )?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C0E => gated!(
+                "event-gatt-indication",
+                Ok(VendorEvent::GattIndication(to_attribute_value(buffer)?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C0F => gated!(
+                "event-gatt-notification",
+                Ok(VendorEvent::GattNotification(to_attribute_value(buffer)?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C10 => gated!(
+                "event-gatt-procedure-complete",
+                Ok(VendorEvent::GattProcedureComplete(
+                    to_gatt_procedure_complete(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C11 => gated!(
+                "event-att-error-response",
+                Ok(VendorEvent::AttErrorResponse(to_att_error_response(
+                    buffer,
+                )?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C12 => gated!(
+                "event-gatt-discover-or-read-characteristic-by-uuid-response",
+                Ok(VendorEvent::GattDiscoverOrReadCharacteristicByUuidResponse(
+                    to_attribute_value(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C13 => gated!(
+                "event-att-write-permit-request",
+                Ok(VendorEvent::AttWritePermitRequest(to_write_permit_request(
+                    buffer,
+                )?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C14 => gated!(
+                "event-att-read-permit-request",
+                Ok(VendorEvent::AttReadPermitRequest(
+                    to_att_read_permit_request(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C15 => gated!(
+                "event-att-read-multiple-permit-request",
+                Ok(VendorEvent::AttReadMultiplePermitRequest(
+                    to_att_read_multiple_permit_request(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C16 => gated!(
+                "event-gatt-tx-pool-available",
+                Ok(VendorEvent::GattTxPoolAvailable(to_gatt_tx_pool_available(
+                    buffer,
+                )?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C17 => gated!(
+                "event-gatt-server-confirmation",
+                Ok(VendorEvent::GattServerConfirmation(to_conn_handle(buffer)?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C18 => gated!(
+                "event-att-prepare-write-permit-request",
+                Ok(VendorEvent::AttPrepareWritePermitRequest(
+                    to_att_prepare_write_permit_request(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C19 => gated!(
+                "event-gatt-eatt-brearer",
+                Ok(VendorEvent::GattEattBrearer(to_gatt_eatt_bearer(buffer)?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C1A => gated!(
+                "event-gatt-multi-notification",
+                Ok(VendorEvent::GattMultiNotification(
+                    to_gatt_multi_notification(buffer)?,
+                )),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C1B => gated!(
+                "event-gatt-notification-complete",
+                Ok(VendorEvent::GattNotificationComplete({
+                    require_len!(buffer, 4);
+                    AttributeHandle(LittleEndian::read_u16(&buffer[2..]))
+                })),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C1D => gated!(
+                "event-gatt-read-ext",
+                Ok(VendorEvent::GattReadExt(to_gatt_read_ext(buffer)?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C1E => gated!(
+                "event-gatt-indication-ext",
+                Ok(VendorEvent::GattIndicationExt(to_attribute_value_ext(
+                    buffer,
+                )?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
+            0x0C1F => gated!(
+                "event-gatt-notification-ext",
+                Ok(VendorEvent::GattNotificationExt(to_attribute_value_ext(
+                    buffer,
+                )?)),
+                Ok(VendorEvent::Unparsed(event_code)),
+            ),
             _ => Err(crate::event::Error::Vendor(VendorError::UnknownEvent(
                 event_code,
             ))),

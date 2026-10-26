@@ -13,6 +13,7 @@ jobs:
           target: thumbv7em-none-eabihf
       - run: cargo build --release --target=thumbv7em-none-eabihf
       - run: cargo build --features=defmt --release --target=thumbv7em-none-eabihf
+      - run: cargo build --no-default-features --features=defmt --release --target=thumbv7em-none-eabihf
 
   test:
     runs-on: ubuntu-latest
@@ -23,3 +24,4 @@ jobs:
           toolchain: stable
           target: thumbv7em-none-eabihf
       - run: cargo test --verbose --all
+      - run: cargo test --verbose --no-default-features --features=event-command-complete --test unparsed
